@@ -139,54 +139,38 @@ export function ScanView() {
 
             {scanState === 'identifying' && (
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', animation: 'pulse 1s infinite' }}>🔍</div>
+                    <div className="scan-identifying-icon">🔍</div>
                     <div className="scan-guide">Identifying your plant...</div>
                     <div className="scan-guide-sub">Our AI botanist is analyzing the photo</div>
                 </div>
             )}
 
             {scanState === 'naming' && identResult && personalityResult && (
-                <div style={{
-                    background: 'white', borderRadius: '20px', padding: '32px',
-                    maxWidth: '380px', width: '90%', textAlign: 'center',
-                }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🌿</div>
-                    <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1F2937' }}>
+                <div className="scan-result-card">
+                    <div className="scan-result-emoji">🌿</div>
+                    <div className="scan-result-name">
                         {identResult.commonName}
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#9CA3AF', fontStyle: 'italic', marginBottom: '16px' }}>
+                    <div className="scan-result-species">
                         {identResult.species}
                     </div>
-                    <div style={{
-                        display: 'inline-block', padding: '4px 12px', borderRadius: '12px',
-                        fontSize: '0.8rem', fontWeight: 600,
-                        background: identResult.careLevel === 'easy' ? '#D1FAE5' : identResult.careLevel === 'moderate' ? '#FEF3C7' : '#FEE2E2',
-                        color: identResult.careLevel === 'easy' ? '#065F46' : identResult.careLevel === 'moderate' ? '#92400E' : '#991B1B',
-                        marginBottom: '20px',
-                    }}>
+                    <div className={`scan-care-badge ${identResult.careLevel}`}>
                         {identResult.careLevel} care
                     </div>
 
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: '6px' }}>
+                    <div className="scan-name-section">
+                        <label className="scan-name-label">
                             Name your plant friend:
                         </label>
                         <input
                             value={nickname}
                             onChange={e => setNickname(e.target.value)}
-                            style={{
-                                width: '100%', padding: '10px 16px', borderRadius: '12px',
-                                border: '2px solid #E5E7EB', fontSize: '1.1rem', fontWeight: 700,
-                                fontFamily: 'Nunito, sans-serif', textAlign: 'center', outline: 'none',
-                            }}
+                            className="scan-name-input"
                             placeholder={personalityResult.suggestedName}
                         />
                     </div>
 
-                    <div style={{
-                        padding: '10px', borderRadius: '12px', background: '#F9FAFB',
-                        fontSize: '0.85rem', color: '#6B7280', marginBottom: '20px',
-                    }}>
+                    <div className="scan-personality-preview">
                         Personality: <strong>{personalityResult.personality.type}</strong>
                         <br />
                         "{personalityResult.personality.speakingStyle}"
@@ -204,19 +188,14 @@ export function ScanView() {
 
             {scanState === 'done' && (
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '4rem', animation: 'toastIn 0.5s ease' }}>🎉</div>
+                    <div className="scan-done-icon">🎉</div>
                     <div className="scan-guide">Welcome to the garden!</div>
                     <div className="scan-guide-sub">+100 coins earned</div>
                 </div>
             )}
 
             {error && (
-                <div style={{
-                    position: 'absolute', bottom: '80px',
-                    background: 'rgba(239, 68, 68, 0.9)',
-                    color: 'white', padding: '12px 20px', borderRadius: '12px',
-                    fontSize: '0.9rem', fontWeight: 600,
-                }}>
+                <div className="scan-error">
                     {error}
                 </div>
             )}

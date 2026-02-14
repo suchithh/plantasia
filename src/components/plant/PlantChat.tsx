@@ -86,11 +86,9 @@ export function PlantChat() {
             <div className="panel" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh' }}>
                 <div className="panel-header">
                     <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{
-                            width: '32px', height: '32px', borderRadius: '50%',
-                            background: `${plant.avatarColor}22`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
-                        }}>🌿</span>
+                        <span className="chat-avatar"
+                            style={{ background: `${plant.avatarColor}22` }}
+                        >🌿</span>
                         Chat with {plant.nickname}
                     </h2>
                     <button className="panel-close" onClick={handleClose}>✕</button>
@@ -124,21 +122,10 @@ export function PlantChat() {
 
                     {/* Quick Replies */}
                     {messages.length === 0 && (
-                        <div style={{
-                            display: 'flex', gap: '6px', padding: '0 16px 8px',
-                            flexWrap: 'wrap',
-                        }}>
+                        <div className="quick-reply-container">
                             {quickReplies.map((text, i) => (
                                 <button key={i} onClick={() => { setInput(text); }}
-                                    style={{
-                                        border: '1px solid rgba(0,0,0,0.1)',
-                                        background: 'white',
-                                        borderRadius: '16px',
-                                        padding: '6px 12px',
-                                        fontSize: '0.8rem',
-                                        cursor: 'pointer',
-                                        fontFamily: 'inherit',
-                                    }}>
+                                    className="quick-reply">
                                     {text}
                                 </button>
                             ))}

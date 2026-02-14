@@ -87,21 +87,17 @@ export function QuestPanel() {
                             </div>
                         ))
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '32px', color: '#9CA3AF' }}>
-                            <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎉</div>
-                            <div style={{ fontWeight: 600 }}>All quests completed!</div>
-                            <div style={{ fontSize: '0.85rem' }}>Check back later for new challenges.</div>
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🎉</div>
+                            <div className="empty-state-title">All quests completed!</div>
+                            <div className="empty-state-sub">Check back later for new challenges.</div>
                         </div>
                     )}
 
                     {/* Completed Quests */}
                     {completedQuests.length > 0 && (
                         <>
-                            <div style={{
-                                fontSize: '0.85rem', fontWeight: 700, color: '#9CA3AF',
-                                marginTop: '24px', marginBottom: '8px',
-                                textTransform: 'uppercase', letterSpacing: '0.5px',
-                            }}>
+                            <div className="completed-header">
                                 Completed ({completedQuests.length})
                             </div>
                             {completedQuests.map(quest => (

@@ -42,21 +42,18 @@ export function PlantDetailPanel() {
                             🌿
                         </div>
                         <div>
-                            <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{plant.commonName}</div>
-                            <div style={{ fontSize: '0.85rem', color: '#9CA3AF', fontStyle: 'italic' }}>{plant.species}</div>
-                            <div style={{
-                                display: 'inline-block',
-                                padding: '2px 8px',
-                                borderRadius: '12px',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                marginTop: '4px',
-                                background: `${personalityColor}15`,
-                                color: personalityColor,
-                                border: `1px solid ${personalityColor}30`,
-                            }}>
+                            <div className="plant-common-name">{plant.commonName}</div>
+                            <div className="plant-species-name">{plant.species}</div>
+                            <span
+                                className="personality-badge"
+                                style={{
+                                    background: `${personalityColor}15`,
+                                    color: personalityColor,
+                                    border: `1px solid ${personalityColor}30`,
+                                }}
+                            >
                                 {plant.personality.type} personality
-                            </div>
+                            </span>
                         </div>
                     </div>
 
@@ -83,7 +80,7 @@ export function PlantDetailPanel() {
                     {/* Moisture Bar */}
                     {moisture !== null && (
                         <div style={{ marginTop: '12px' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
+                            <div className="moisture-label">
                                 💧 Soil Moisture: {moisture}%
                             </div>
                             <div className="moisture-bar">
@@ -97,19 +94,10 @@ export function PlantDetailPanel() {
 
                     {/* Personality Quirks */}
                     <div style={{ marginTop: '16px' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', marginBottom: '6px' }}>
-                            Quirks
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        <div className="section-label">Quirks</div>
+                        <div className="quirk-container">
                             {plant.personality.quirks.map((q, i) => (
-                                <span key={i} style={{
-                                    padding: '4px 10px',
-                                    borderRadius: '12px',
-                                    fontSize: '0.8rem',
-                                    background: 'rgba(0,0,0,0.04)',
-                                }}>
-                                    {q}
-                                </span>
+                                <span key={i} className="quirk-tag">{q}</span>
                             ))}
                         </div>
                     </div>
