@@ -4,7 +4,6 @@ import { useGameStore } from '../../stores/gameStore';
 import { identifyPlant, generatePersonality } from '../../services/gemini';
 import { getNextAvailableSlot } from '../../services/mockData';
 import type { PlantCharacter } from '../../types';
-import { colors } from '../../constants/colors';
 import {
     Camera,
     ScanSearch,
@@ -14,6 +13,8 @@ import {
     Plus,
     Coins,
     X,
+    Sparkles,
+    Check
 } from 'lucide-react';
 
 type ScanState = 'camera' | 'capturing' | 'identifying' | 'naming' | 'done';
@@ -131,88 +132,88 @@ export function ScanView() {
     };
 
     return (
-        <div className="scan-overlay">
-            <button className="scan-close-btn" onClick={handleClose}><X size={18} /></button>
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-            {scanState === 'camera' && (
-                <>
-                    <video ref={videoRef} className="scan-video" autoPlay playsInline muted />
-                    <div className="scan-guide"><Camera size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Point at your plant</div>
-                    <div className="scan-guide-sub">Make sure the plant is well-lit and centered</div>
-                    <button className="scan-capture-btn" onClick={handleCapture} />
-                </>
-            )}
-
-            {scanState === 'capturing' && (
-                <div className="scan-guide"><Camera size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Capturing...</div>
-            )}
-
-            {scanState === 'identifying' && (
-                <div style={{ textAlign: 'center' }}>
-                    <div className="scan-identifying-icon"><ScanSearch size={48} /></div>
-                    <div className="scan-guide">Identifying your plant...</div>
-                    <div className="scan-guide-sub">Our AI botanist is analyzing the photo</div>
+        <div className="checkin-overlay">
+            <div className="checkin-hud">
+                <div className="checkin-header">
+                    <h2>Add New Plant</h2>
+                    <p>Scan your real plant to bring it into the game!</p>
                 </div>
-            )}
 
-            {scanState === 'naming' && identResult && personalityResult && (
-                <div className="scan-result-card">
-                    <div className="scan-result-icon"><Leaf size={44} /></div>
-                    <div className="scan-result-name">
-                        {identResult.commonName}
-                    </div>
-                    <div className="scan-result-species">
-                        {identResult.species}
-                    </div>
-                    <div className={`scan-care-badge ${identResult.careLevel}`}>
-                        {identResult.careLevel} care
-                    </div>
+                <div className="checkin-camera-frame">
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-                    <div className="scan-name-section">
-                        <label className="scan-name-label">
-                            Name your plant friend:
-                        </label>
-                        <input
-                            value={nickname}
-                            onChange={e => setNickname(e.target.value)}
-                            className="scan-name-input"
-                            placeholder={personalityResult.suggestedName}
-                        />
-                    </div>
+                    {scanState === 'camera' && (
+                        <>
+                            <video ref={videoRef} className="checkin-video" autoPlay playsInline muted />
+                            <div className="camera-guide-overlay">
+                                <div className="guide-text">
+                                    <Camera size={20} />
+                                    <span>Point at your plant</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
-                    <div className="scan-personality-preview">
-                        Personality: <strong>{personalityResult.personality.type}</strong>
-                        <br />
-                        "{personalityResult.personality.speakingStyle}"
-                    </div>
+                    {(scanState === 'capturing' || scanState === 'identifying') && (
+                        <div className="analysis-view">
+                            <div className="scanner-line" />
+                            <div className="analysis-status">
+                                <ScanSearch size={24} className="spin-slow" />
+                                <span>Identifying plant species...</span>
+                            </div>
+                        </div>
+                    )}
 
-                    <button
-                        className="action-btn primary"
-                        style={{ width: '100%', padding: '14px', fontSize: '1rem', gap: '8px' }}
-                        onClick={handleConfirm}
-                    >
-                        <Sprout size={18} /> Add to Garden
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px', opacity: 0.8 }}>
-                            (<Plus size={12} /><Coins size={14} />100)
-                        </span>
+                    {scanState === 'naming' && identResult && personalityResult && (
+                        <div className="scan-result-glass">
+                            <div className="scan-result-icon"><Leaf size={32} /></div>
+                            <h3>{identResult.commonName}</h3>
+                            <div className="scan-species-tag">{identResult.species}</div>
+
+                            <div className="scan-name-input-container">
+                                <label>Name your friend:</label>
+                                <input
+                                    value={nickname}
+                                    onChange={e => setNickname(e.target.value)}
+                                    placeholder={personalityResult.suggestedName}
+                                    className="scan-glass-input"
+                                />
+                            </div>
+
+                            <button className="scan-confirm-btn" onClick={handleConfirm}>
+                                <Plus size={18} /> Add to Garden
+                            </button>
+                        </div>
+                    )}
+
+                    {scanState === 'done' && (
+                        <div className="analysis-view" style={{ flexDirection: 'column', gap: '16px' }}>
+                            <div className="scan-done-icon-large"><PartyPopper size={48} /></div>
+                            <h2 style={{ color: '#4ADE80', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>Welcome to the Garden!</h2>
+                        </div>
+                    )}
+                </div>
+
+                {/* Controls Area */}
+                <div className="checkin-controls">
+                    {scanState === 'camera' && (
+                        <button className="capture-btn-large" onClick={handleCapture}>
+                            <div className="capture-inner" />
+                        </button>
+                    )}
+
+                    <button className="checkin-close-fab" onClick={handleClose}>
+                        <X size={24} />
                     </button>
                 </div>
-            )}
 
-            {scanState === 'done' && (
-                <div style={{ textAlign: 'center' }}>
-                    <div className="scan-done-icon"><PartyPopper size={56} /></div>
-                    <div className="scan-guide">Welcome to the garden!</div>
-                    <div className="scan-guide-sub">+100 coins earned</div>
-                </div>
-            )}
-
-            {error && (
-                <div className="scan-error">
-                    {error}
-                </div>
-            )}
+                {error && (
+                    <div className="scan-error-toast">
+                        {error}
+                        <button onClick={() => setError('')}><X size={14} /></button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

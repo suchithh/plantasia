@@ -55,10 +55,10 @@ export function ShopPanel() {
 
     return (
         <div className="shop-overlay">
-            <div className="shop-panel">
+            <div className="shop-panel glass-panel">
                 <div className="shop-header">
                     <div className="shop-header-left">
-                        <ShoppingBag size={22} />
+                        <ShoppingBag size={24} className="text-emerald-500" />
                         <h2>Garden Shop</h2>
                     </div>
                     <div className="shop-coins">
@@ -66,7 +66,7 @@ export function ShopPanel() {
                         <span>{coins}</span>
                     </div>
                     <button className="shop-close" onClick={() => setActivePanel('none')}>
-                        <X size={20} />
+                        <X size={24} />
                     </button>
                 </div>
 
@@ -102,26 +102,29 @@ export function ShopPanel() {
                         const Icon = iconMap[item.icon] || TreePine;
                         return (
                             <div key={item.id} className={`shop-item-card garden ${status}`}>
-                                <div className="shop-item-icon" style={{ background: status === 'owned' ? '#22C55E22' : undefined }}>
-                                    {status === 'owned' ? <Check size={32} /> : status === 'locked' ? <Lock size={32} /> : <Icon size={32} />}
+                                <div className="shop-item-icon">
+                                    {status === 'owned' ? <Check size={28} /> : status === 'locked' ? <Lock size={28} /> : <Icon size={28} />}
                                 </div>
-                                <h3>{item.name}</h3>
-                                <p>{item.description}</p>
-                                <div className="shop-item-footer">
-                                    {status === 'owned' ? (
-                                        <span className="shop-owned-badge">Owned</span>
-                                    ) : status === 'locked' ? (
-                                        <span className="shop-locked-badge">Buy Cozy Garden first</span>
-                                    ) : (
-                                        <button
-                                            className="shop-buy-btn"
-                                            onClick={() => handleBuy(item)}
-                                            disabled={status === 'too_expensive'}
-                                        >
-                                            <Coins size={14} />
-                                            {item.price}
-                                        </button>
-                                    )}
+                                <div className="shop-item-content">
+                                    <h3>{item.name}</h3>
+                                    <p>{item.description}</p>
+
+                                    <div className="shop-item-action">
+                                        {status === 'owned' ? (
+                                            <span className="shop-owned-badge">Owned</span>
+                                        ) : status === 'locked' ? (
+                                            <span className="shop-locked-badge">Locked</span>
+                                        ) : (
+                                            <button
+                                                className="shop-buy-btn"
+                                                onClick={() => handleBuy(item)}
+                                                disabled={status === 'too_expensive'}
+                                            >
+                                                <Coins size={14} />
+                                                {item.price}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 {justBought === item.id && (
                                     <div className="shop-purchased-flash">Purchased!</div>
@@ -135,18 +138,20 @@ export function ShopPanel() {
                         return (
                             <div key={item.id} className={`shop-item-card cosmetic ${item.owned ? 'owned' : ''}`}>
                                 <div className="shop-item-icon cosmetic-icon">
-                                    <Icon size={32} />
+                                    <Icon size={28} />
                                 </div>
-                                <h3>{item.name}</h3>
-                                <p>{item.description}</p>
-                                <div className="shop-item-footer">
-                                    <button
-                                        className="shop-buy-btn cosmetic"
-                                        onClick={() => handleBuy(item)}
-                                    >
-                                        <Coins size={14} />
-                                        {item.price}
-                                    </button>
+                                <div className="shop-item-content">
+                                    <h3>{item.name}</h3>
+                                    <p>{item.description}</p>
+                                    <div className="shop-item-action">
+                                        <button
+                                            className="shop-buy-btn cosmetic"
+                                            onClick={() => handleBuy(item)}
+                                        >
+                                            <Coins size={14} />
+                                            {item.price}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );

@@ -12,6 +12,7 @@ import { SensorPairScreen } from './components/sensor/SensorPairScreen';
 import { DailyCheckIn } from './components/checkin/DailyCheckIn';
 import { CheckInResult } from './components/checkin/CheckInResult';
 import { ShopPanel } from './components/shop/ShopPanel';
+import { BottomDock } from './components/ui/BottomDock';
 import { useGameStore } from './stores/gameStore';
 import { getSensorBridge } from './services/sensorBridge';
 import type { GameEvent } from './types';
@@ -188,16 +189,8 @@ export function App() {
             {/* HUD Overlay */}
             <GardenHUD />
 
-            {/* Add Plant Button — Scanner Portal */}
-            <button className="add-plant-btn" onClick={() => setActivePanel('scan')}>
-                <span className="add-btn-ring" />
-                <span className="add-btn-ring add-btn-ring-2" />
-                <span className="add-btn-ring add-btn-ring-3" />
-                <span className="add-btn-core">
-                    <Sprout size={26} strokeWidth={2.5} />
-                </span>
-                <span className="add-btn-label">Scan</span>
-            </button>
+            {/* Bottom Dock — Unified Controls (Only visible when no panel is open) */}
+            {activePanel === 'none' && <BottomDock />}
 
             {/* Game Toast */}
             {toastEvent && <GameToast event={toastEvent} />}
