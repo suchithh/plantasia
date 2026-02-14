@@ -214,3 +214,55 @@ Keep it game-y, educational, and under 4 sentences.`;
 
     return await callGemini(prompt);
 }
+
+// ─── Daily Check-In Analysis ───
+
+export interface CheckInAnalysisRaw {
+    healthy: boolean;
+    confidence: number;
+    tips: string[];
+    zombieType?: ZombieType;
+    disease?: string;
+    severity?: 'minor' | 'moderate' | 'severe' | 'critical';
+    explanation?: string;
+    defeatSteps?: string[];
+}
+
+export async function analyzeCheckIn(photoBase64: string, plantSpecies: string): Promise<CheckInAnalysisRaw> {
+    const prompt = `You are the daily health check system in "Plantasia: Guardians" — a game where plant diseases are zombie enemies.
+
+A player is doing their daily check-in for their ${plantSpecies}. Analyze the photo and determine if the plant looks HEALTHY or if there's a problem.
+
+If the plant looks HEALTHY, respond with:
+{
+  "healthy": true,
+  "confidence": 0.9,
+  "tips": ["One fun care tip", "Another helpful tip"]
+}
+
+If the plant shows signs of disease/stress, respond with:
+{
+  "healthy": false,
+  "confidence": 0.85,
+  "tips": ["Emergency tip 1", "Emergency tip 2"],
+  "zombieType": "one of: drownface, thirster, sunscorch, fungus_phil, the_swarm, neglecto",
+  "disease": "Disease name",
+  "severity": "one of: minor, moderate, severe, critical",
+  "explanation": "One sentence explaining what you see",
+  "defeatSteps": ["Step 1 to fix it", "Step 2", "Step 3"]
+}
+
+ZOMBIE TYPES:
+- drownface: Overwatering / Root rot (yellow leaves, soggy soil, mushy stems)
+- thirster: Dehydration (wilting, dry crispy edges, light pot)
+- sunscorch: Light burn (white/brown patches, bleached leaves)
+- fungus_phil: Fungal infection (spots, mold, powdery coating)
+- the_swarm: Pests (webs, sticky residue, tiny bugs)
+- neglecto: General neglect (dust, multiple issues, droopy)
+
+Lean slightly toward "healthy" for ambiguous photos — we want the game to be encouraging!
+Only respond with JSON.`;
+
+    const text = await callGemini(prompt, photoBase64);
+    return parseJsonResponse<CheckInAnalysisRaw>(text);
+}

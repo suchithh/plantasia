@@ -10,6 +10,8 @@ import {
     WifiOff,
     Radio,
     Droplets,
+    ShoppingBag,
+    Bluetooth,
 } from 'lucide-react';
 
 // SVG arc gauge for quest progress
@@ -83,8 +85,16 @@ export function GardenHUD() {
                 </div>
             </div>
 
-            {/* ─── Top-right: Sensor ─── */}
+            {/* ─── Top-right: Shop + Sensor ─── */}
             <div className="hud-top-right">
+                <button className="hud-shop-btn" onClick={() => setActivePanel('shop')} title="Shop">
+                    <ShoppingBag size={20} strokeWidth={2.5} />
+                </button>
+                {sensorConnection === 'disconnected' && (
+                    <button className="hud-pair-btn" onClick={() => setActivePanel('sensor_pair')} title="Pair Sensor">
+                        <Bluetooth size={18} strokeWidth={2.5} />
+                    </button>
+                )}
                 <div className={`hud-sensor ${sensorClass}`}>
                     <SensorIcon size={18} strokeWidth={2.5} className="hud-sensor-icon" />
                     {moisture !== null && sensorConnection !== 'disconnected' && (

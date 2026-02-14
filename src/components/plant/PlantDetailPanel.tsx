@@ -1,6 +1,8 @@
 // Plantasia: Guardians — Plant Detail Panel
 import { useGameStore } from '../../stores/gameStore';
 import { colors } from '../../constants/colors';
+import { zombieTemplates } from '../../constants/zombies';
+import type { CareTask } from '../../types';
 import {
     Heart,
     AlertTriangle,
@@ -15,7 +17,12 @@ import {
     Star,
     Smile,
     X,
+    Camera,
+    Flame,
+    ClipboardCheck,
+    Skull,
 } from 'lucide-react';
+import { useEffect } from 'react';
 
 const statusIcons: Record<string, typeof Heart> = {
     healthy: Heart,
@@ -33,18 +40,91 @@ const statusColors: Record<string, string> = {
     dead: '#6B7280',
 };
 
+// Generate care tasks based on sensor data
+function generateCareTasks(plantId: string, moisture: number | null): CareTask[] {
+    const tasks: CareTask[] = [];
+
+    if (moisture !== null && moisture < 30) {
+        tasks.push({
+            id: `care_water_${plantId}`,
+            plantId,
+            title: '💧 Water Your Plant',
+            description: `Soil is at ${moisture}% — aim for 40-60%`,
+            coins: 15,
+            completed: false,
+            zombieType: 'thirster',
+            sensorDriven: true,
+        });
+    }
+
+    if (moisture !== null && moisture > 75) {
+        tasks.push({
+            id: `care_drain_${plantId}`,
+            plantId,
+            title: '🚰 Check Drainage',
+            description: `Soil is at ${moisture}% — that's too wet!`,
+            coins: 15,
+            completed: false,
+            zombieType: 'drownface',
+            sensorDriven: true,
+        });
+    }
+
+    // Weekly tasks (always show)
+    tasks.push({
+        id: `care_pest_${plantId}`,
+        plantId,
+        title: '🔍 Pest Check',
+        description: 'Look under leaves for tiny bugs or webs',
+        coins: 10,
+        completed: false,
+        zombieType: 'the_swarm',
+        sensorDriven: false,
+    });
+
+    tasks.push({
+        id: `care_light_${plantId}`,
+        plantId,
+        title: '☀️ Check Light Exposure',
+        description: 'Make sure your plant has the right amount of light',
+        coins: 10,
+        completed: false,
+        zombieType: 'sunscorch',
+        sensorDriven: false,
+    });
+
+    return tasks;
+}
+
 export function PlantDetailPanel() {
     const selectedPlantId = useGameStore(s => s.selectedPlantId);
     const plants = useGameStore(s => s.plants);
     const setActivePanel = useGameStore(s => s.setActivePanel);
     const selectPlant = useGameStore(s => s.selectPlant);
     const sensorData = useGameStore(s => s.sensorData);
+    const setSelectedCheckInPlant = useGameStore(s => s.setSelectedCheckInPlant);
+    const careTasks = useGameStore(s => s.careTasks);
+    const setCareTasks = useGameStore(s => s.setCareTasks);
+    const completeCareTask = useGameStore(s => s.completeCareTask);
 
     const plant = plants.find(p => p.id === selectedPlantId);
+
+    // Generate care tasks when plant is selected
+    useEffect(() => {
+        if (plant) {
+            const tasks = generateCareTasks(plant.id, sensorData?.soilMoisture ?? null);
+            setCareTasks(tasks);
+        }
+    }, [plant?.id, sensorData?.soilMoisture, plant, setCareTasks]);
+
     if (!plant) return null;
 
     const handleChat = () => setActivePanel('plant_chat');
     const handleClose = () => { selectPlant(null); setActivePanel('none'); };
+    const handleCheckIn = () => {
+        setSelectedCheckInPlant(plant.id);
+        setActivePanel('daily_checkin');
+    };
 
     const StatusIcon = statusIcons[plant.healthStatus] || Heart;
     const statusColor = statusColors[plant.healthStatus] || '#22C55E';
@@ -56,6 +136,8 @@ export function PlantDetailPanel() {
             : moisture < 20 ? colors.sensor.moistureLow
                 : colors.sensor.moistureOk
         : '#9CA3AF';
+
+    const plantTasks = careTasks.filter(t => t.plantId === plant.id);
 
     return (
         <div className="panel-overlay" onClick={handleClose}>
@@ -88,6 +170,19 @@ export function PlantDetailPanel() {
                             </span>
                         </div>
                     </div>
+
+                    {/* Streak & Last Check-In */}
+                    {plant.streak > 0 && (
+                        <div className="plant-streak-bar">
+                            <Flame size={16} color="#F59E0B" />
+                            <span>{plant.streak} day streak!</span>
+                            {plant.lastCheckIn && (
+                                <span className="last-checkin-date">
+                                    Last: {new Date(plant.lastCheckIn).toLocaleDateString()}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* Stats */}
                     <div className="plant-stats">
@@ -128,6 +223,42 @@ export function PlantDetailPanel() {
                         </div>
                     )}
 
+                    {/* Care Tasks */}
+                    {plantTasks.length > 0 && (
+                        <div className="care-tasks-section">
+                            <div className="section-label">
+                                <ClipboardCheck size={14} /> Care Tasks
+                            </div>
+                            {plantTasks.map(task => {
+                                const zombieInfo = zombieTemplates[task.zombieType];
+                                return (
+                                    <div key={task.id} className={`care-task-card ${task.completed ? 'completed' : ''}`}>
+                                        <div className="care-task-main">
+                                            <button
+                                                className="care-task-check"
+                                                onClick={() => completeCareTask(task.id)}
+                                                disabled={task.completed}
+                                            >
+                                                {task.completed ? '✓' : '○'}
+                                            </button>
+                                            <div className="care-task-text">
+                                                <div className="care-task-title">{task.title}</div>
+                                                <div className="care-task-desc">{task.description}</div>
+                                            </div>
+                                            <span className="care-task-coins">+{task.coins}</span>
+                                        </div>
+                                        {!task.completed && (
+                                            <div className="care-task-zombie-warning" style={{ color: zombieInfo?.color }}>
+                                                <Skull size={12} />
+                                                <span>Neglect spawns <strong>{zombieInfo?.name}</strong></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
                     {/* Personality Quirks */}
                     <div style={{ marginTop: '16px' }}>
                         <div className="section-label">Quirks</div>
@@ -140,6 +271,9 @@ export function PlantDetailPanel() {
 
                     {/* Actions */}
                     <div className="plant-actions">
+                        <button className="action-btn checkin" onClick={handleCheckIn}>
+                            <Camera size={16} /> Daily Check-In
+                        </button>
                         <button className="action-btn primary" onClick={handleChat}>
                             <MessageCircle size={16} /> Chat
                         </button>
@@ -152,3 +286,4 @@ export function PlantDetailPanel() {
         </div>
     );
 }
+

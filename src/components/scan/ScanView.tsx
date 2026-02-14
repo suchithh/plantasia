@@ -91,7 +91,8 @@ export function ScanView() {
     const handleConfirm = () => {
         if (!identResult || !personalityResult) return;
 
-        const slot = getNextAvailableSlot(plants.map(p => p.position));
+        const { plants, gardenSize } = useGameStore.getState();
+        const slot = getNextAvailableSlot(plants.map(p => p.position), gardenSize);
         if (!slot) {
             setError('Garden is full! (9 plants max)');
             return;

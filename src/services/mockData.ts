@@ -107,21 +107,20 @@ export const mockQuests: Quest[] = [
 // Mark first quest as active
 mockQuests[0].active = true;
 
-// ─── Available garden positions for new plants ───
-export const gardenSlots = [
-    { x: -2, y: 0, z: 0 },
-    { x: 0, y: 0, z: 0 },
-    { x: 2, y: 0, z: 0 },
-    { x: -2, y: 0, z: 2 },
-    { x: 0, y: 0, z: 2 },
-    { x: 2, y: 0, z: 2 },
-    { x: -2, y: 0, z: -2 },
-    { x: 0, y: 0, z: -2 },
-    { x: 2, y: 0, z: -2 },
-];
+// ─── Dynamic garden positions based on size ───
+import { gardenLayouts } from './shopData';
+import type { GardenSize } from '../types';
 
-export function getNextAvailableSlot(usedPositions: { x: number; y: number; z: number }[]): { x: number; y: number; z: number } | null {
-    return gardenSlots.find(slot =>
+export function getGardenSlots(size: GardenSize) {
+    return gardenLayouts[size];
+}
+
+export function getNextAvailableSlot(
+    usedPositions: { x: number; y: number; z: number }[],
+    gardenSize: GardenSize = 'small'
+): { x: number; y: number; z: number } | null {
+    const slots = gardenLayouts[gardenSize];
+    return slots.find(slot =>
         !usedPositions.some(used => used.x === slot.x && used.z === slot.z)
     ) || null;
 }

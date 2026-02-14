@@ -28,6 +28,7 @@ export interface PlantCharacter {
     happiness: number; // 0-100
     streak: number;
     shieldStrength: number; // 0-100, builds when soil is healthy
+    lastCheckIn?: string; // ISO date of last daily check-in
     createdAt: string;
 }
 
@@ -109,13 +110,69 @@ export type EmotionalState = 'sleepy' | 'content' | 'curious' | 'excited' | 'sta
 
 // ─── UI State ───
 
-export type ActivePanel = 'none' | 'plant_detail' | 'plant_chat' | 'zombie_info' | 'quest_list' | 'scan' | 'health_check' | 'diagnosis';
+export type ActivePanel =
+    | 'none' | 'plant_detail' | 'plant_chat' | 'zombie_info' | 'quest_list'
+    | 'scan' | 'health_check' | 'diagnosis'
+    | 'sensor_pair' | 'daily_checkin' | 'checkin_result' | 'shop';
 
 export interface ChatMessage {
     id: string;
     sender: 'plant' | 'user';
     text: string;
     timestamp: number;
+}
+
+// ─── Shop & Garden ───
+
+export type GardenSize = 'small' | 'medium' | 'large';
+
+export interface ShopItem {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    category: 'garden_upgrade' | 'cosmetic';
+    icon: string;        // lucide icon name
+    owned: boolean;
+    gardenSize?: GardenSize; // for garden upgrades
+}
+
+// ─── Daily Check-In ───
+
+export interface CheckInRecord {
+    id: string;
+    plantId: string;
+    date: string; // ISO date
+    healthy: boolean;
+    coins: number;
+    zombieType?: ZombieType;
+    tips?: string[];
+}
+
+export interface CheckInAnalysis {
+    healthy: boolean;
+    confidence: number;
+    tips: string[];
+    coins: number;
+    // unhealthy path
+    zombieType?: ZombieType;
+    disease?: string;
+    severity?: 'minor' | 'moderate' | 'severe' | 'critical';
+    explanation?: string;
+    defeatSteps?: string[];
+}
+
+// ─── Care Tasks ───
+
+export interface CareTask {
+    id: string;
+    plantId: string;
+    title: string;
+    description: string;
+    coins: number;
+    completed: boolean;
+    zombieType: ZombieType; // zombie that spawns if neglected
+    sensorDriven: boolean;  // true = from sensor data
 }
 
 // ─── Gemini AI Responses ───
@@ -150,4 +207,6 @@ export type GameEvent =
     | { type: 'plant_touched'; plantId: string; coins: number }
     | { type: 'shield_built'; plantId: string; strength: number }
     | { type: 'plant_added'; plantId: string }
-    | { type: 'coins_earned'; amount: number; reason: string };
+    | { type: 'coins_earned'; amount: number; reason: string }
+    | { type: 'daily_checkin'; plantId: string; healthy: boolean; coins: number }
+    | { type: 'shop_purchase'; itemId: string; cost: number };

@@ -8,6 +8,10 @@ import { PlantChat } from './components/plant/PlantChat';
 import { ZombieInfoPanel } from './components/zombie/ZombieInfoPanel';
 import { QuestPanel } from './components/quest/QuestPanel';
 import { ScanView } from './components/scan/ScanView';
+import { SensorPairScreen } from './components/sensor/SensorPairScreen';
+import { DailyCheckIn } from './components/checkin/DailyCheckIn';
+import { CheckInResult } from './components/checkin/CheckInResult';
+import { ShopPanel } from './components/shop/ShopPanel';
 import { useGameStore } from './stores/gameStore';
 import { getSensorBridge } from './services/sensorBridge';
 import type { GameEvent } from './types';
@@ -40,6 +44,8 @@ const toastConfig: Record<string, { message: string, Icon: LucideIcon, color: st
     shield_built: { message: 'Shield strength increasing!', Icon: Shield, color: '#38BDF8' },
     plant_added: { message: 'New plant added to garden!', Icon: Sprout, color: '#22C55E' },
     coins_earned: { message: 'Coins earned!', Icon: Coins, color: '#FBBF24' },
+    daily_checkin: { message: 'Daily check-in complete!', Icon: Heart, color: '#22C55E' },
+    shop_purchase: { message: 'Item purchased!', Icon: Coins, color: '#FBBF24' },
 };
 
 function GameToast({ event }: { event: GameEvent }) {
@@ -202,6 +208,10 @@ export function App() {
             {activePanel === 'zombie_info' && <ZombieInfoPanel />}
             {activePanel === 'quest_list' && <QuestPanel />}
             {activePanel === 'scan' && <ScanView />}
+            {activePanel === 'sensor_pair' && <SensorPairScreen />}
+            {activePanel === 'daily_checkin' && <DailyCheckIn />}
+            {activePanel === 'checkin_result' && <CheckInResult />}
+            {activePanel === 'shop' && <ShopPanel />}
 
             {/* Demo Controls */}
             <DemoControls
