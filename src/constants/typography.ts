@@ -1,9 +1,10 @@
 // Plantasia: Guardians — Typography
-// Nunito: friendly, rounded font that matches game-y vibe
+// Nunito: friendly body text | Quicksand: warm rounded headings
 
 export const typography = {
     fontFamily: {
-        primary: "'Nunito', 'Segoe UI', system-ui, sans-serif",
+        primary: "'Nunito', system-ui, sans-serif",
+        heading: "'Plus Jakarta Sans', 'Nunito', sans-serif",
         mono: "'JetBrains Mono', 'Fira Code', monospace",
     },
 

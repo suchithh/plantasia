@@ -19,51 +19,54 @@ const statusColors: Record<string, string> = {
 };
 
 // Create a canvas-based sprite texture for the name tag
-function createNameTexture(name: string, emoji: string, statusColor: string): THREE.CanvasTexture {
+// Premium floating text — no bubble, just serif text with layered shadows
+function createNameTexture(name: string, _initial: string, statusColor: string): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
-    canvas.width = 300;
+    canvas.width = 512;
     canvas.height = 80;
     const ctx = canvas.getContext('2d')!;
 
-    // Shadow
-    ctx.shadowColor = 'rgba(0,0,0,0.15)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 3;
-
-    // Background pill with gradient
-    const gradient = ctx.createLinearGradient(10, 0, 290, 0);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.roundRect(10, 8, 280, 64, 32);
-    ctx.fill();
-
-    // Colored accent bar
-    ctx.shadowColor = 'transparent';
-    ctx.fillStyle = statusColor;
-    ctx.beginPath();
-    ctx.roundRect(10, 8, 8, 64, [32, 0, 0, 32]);
-    ctx.fill();
-
-    // Text
-    ctx.font = 'bold 30px Nunito, sans-serif';
-    ctx.fillStyle = '#1F2937';
+    // Setup text
+    ctx.font = '700 40px "Noto Serif", Georgia, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${emoji} ${name}`, 155, 42);
+
+    // Dark outline for readability over any background
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(name, 256, 30);
+
+    // White fill with soft glow
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 1;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(name, 256, 30);
+
+    // Subtle colored accent line beneath
+    ctx.shadowColor = 'transparent';
+    const textWidth = ctx.measureText(name).width;
+    ctx.fillStyle = statusColor;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.roundRect(256 - textWidth / 2, 56, textWidth, 3, 1.5);
+    ctx.fill();
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
     return texture;
 }
 
-const personalityEmoji: Record<string, string> = {
-    dramatic: '🎭',
-    chill: '😎',
-    anxious: '😰',
-    wise: '🧙',
-    cheerful: '✨',
+const personalityInitial: Record<string, string> = {
+    dramatic: 'D',
+    chill: 'C',
+    anxious: 'A',
+    wise: 'W',
+    cheerful: 'Ch',
 };
 
 // Floating hearts when happy
@@ -104,8 +107,8 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
 
     // Memoize the name tag texture
     const nameTexture = useMemo(() => {
-        const emoji = personalityEmoji[plant.personality.type] || '🌱';
-        return createNameTexture(plant.nickname, emoji, color);
+        const initial = personalityInitial[plant.personality.type] || 'P';
+        return createNameTexture(plant.nickname, initial, color);
     }, [plant.nickname, plant.personality.type, color]);
 
     useFrame(() => {
@@ -369,7 +372,7 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
             )}
 
             {/* Name tag sprite */}
-            <sprite position={[0, 1.55, 0]} scale={[1.4, 0.35, 1]}>
+            <sprite position={[0, 1.55, 0]} scale={[1.6, 0.36, 1]}>
                 <spriteMaterial map={nameTexture} transparent depthTest={false} />
             </sprite>
         </group>

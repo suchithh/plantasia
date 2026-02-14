@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../../stores/gameStore';
 import { chatWithPlant } from '../../services/gemini';
+import { Leaf, SendHorizontal, X } from 'lucide-react';
 
 export function PlantChat() {
     const selectedPlantId = useGameStore(s => s.selectedPlantId);
@@ -88,10 +89,10 @@ export function PlantChat() {
                     <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span className="chat-avatar"
                             style={{ background: `${plant.avatarColor}22` }}
-                        >🌿</span>
+                        ><Leaf size={15} /></span>
                         Chat with {plant.nickname}
                     </h2>
-                    <button className="panel-close" onClick={handleClose}>✕</button>
+                    <button className="panel-close" onClick={handleClose}><X size={16} /></button>
                 </div>
 
                 <div className="chat-container">
@@ -99,7 +100,7 @@ export function PlantChat() {
                         {/* Welcome message if no history */}
                         {messages.length === 0 && (
                             <div className="chat-bubble plant">
-                                Hey there! I'm {plant.nickname}. {plant.personality.speakingStyle} What's up? 🌱
+                                Hey there! I'm {plant.nickname}. {plant.personality.speakingStyle} What's up?
                             </div>
                         )}
 
@@ -142,7 +143,7 @@ export function PlantChat() {
                             disabled={isChatLoading}
                         />
                         <button className="chat-send-btn" onClick={handleSend} disabled={isChatLoading}>
-                            ▶
+                            <SendHorizontal size={18} />
                         </button>
                     </div>
                 </div>

@@ -1,5 +1,6 @@
 // Plantasia: Guardians — Quest Panel
 import { useGameStore } from '../../stores/gameStore';
+import { Scroll, Coins, Star, Lightbulb, Check, Trophy, X } from 'lucide-react';
 
 export function QuestPanel() {
     const quests = useGameStore(s => s.quests);
@@ -30,8 +31,8 @@ export function QuestPanel() {
         <div className="panel-overlay" onClick={handleClose}>
             <div className="panel" onClick={e => e.stopPropagation()}>
                 <div className="panel-header">
-                    <h2>📜 Quests</h2>
-                    <button className="panel-close" onClick={handleClose}>✕</button>
+                    <h2><Scroll size={22} /> Quests</h2>
+                    <button className="panel-close" onClick={handleClose}><X size={16} /></button>
                 </div>
                 <div className="panel-body">
                     {/* Active Quests */}
@@ -49,7 +50,7 @@ export function QuestPanel() {
                                             style={{ cursor: step.completed ? 'default' : 'pointer' }}
                                         >
                                             <div className={`quest-step-check ${step.completed ? 'done' : ''}`}>
-                                                {step.completed && '✓'}
+                                                {step.completed && <Check size={12} />}
                                             </div>
                                             <span style={{
                                                 textDecoration: step.completed ? 'line-through' : 'none',
@@ -63,14 +64,24 @@ export function QuestPanel() {
 
                                 {/* Reward */}
                                 <div className="quest-reward">
-                                    <span>🪙 {quest.reward.coins}</span>
-                                    <span>⭐ {quest.reward.xp} XP</span>
-                                    {quest.reward.trophy && <span>{quest.reward.trophy}</span>}
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Coins size={14} /> {quest.reward.coins}
+                                    </span>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Star size={14} /> {quest.reward.xp} XP
+                                    </span>
+                                    {quest.reward.trophy && (
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Trophy size={14} /> {quest.reward.trophy}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Educational tie-in */}
                                 <div className="edu-card">
-                                    <div className="edu-card-title">💡 Did you know?</div>
+                                    <div className="edu-card-title">
+                                        <Lightbulb size={16} /> Did you know?
+                                    </div>
                                     <p>{quest.educational}</p>
                                 </div>
 
@@ -88,7 +99,7 @@ export function QuestPanel() {
                         ))
                     ) : (
                         <div className="empty-state">
-                            <div className="empty-state-icon">🎉</div>
+                            <div className="empty-state-icon"><Trophy size={32} /></div>
                             <div className="empty-state-title">All quests completed!</div>
                             <div className="empty-state-sub">Check back later for new challenges.</div>
                         </div>
@@ -104,8 +115,14 @@ export function QuestPanel() {
                                 <div key={quest.id} className="quest-card completed">
                                     <div className="quest-title">{quest.title}</div>
                                     <div className="quest-reward">
-                                        <span>🪙 {quest.reward.coins}</span>
-                                        {quest.reward.trophy && <span>{quest.reward.trophy}</span>}
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Coins size={14} /> {quest.reward.coins}
+                                        </span>
+                                        {quest.reward.trophy && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Trophy size={14} /> {quest.reward.trophy}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             ))}

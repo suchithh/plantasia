@@ -10,43 +10,42 @@ interface ZombieModelProps {
     onClick: () => void;
 }
 
+// Premium floating text — no bordered pill, colored glow + serif
 function createZombieNameTexture(name: string, emoji: string, color: string, threatLevel: number): THREE.CanvasTexture {
     const canvas = document.createElement('canvas');
-    canvas.width = 300;
+    canvas.width = 360;
     canvas.height = 80;
     const ctx = canvas.getContext('2d')!;
 
-    // Shadow
-    ctx.shadowColor = 'rgba(0,0,0,0.2)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 3;
+    // Colored glow shadow for menacing feel
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 0;
 
-    // Background with zombie color
-    ctx.fillStyle = color + '20';
-    ctx.beginPath();
-    ctx.roundRect(10, 8, 280, 64, 32);
-    ctx.fill();
-
-    // Border
-    ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    // Threat indicator
-    ctx.fillStyle = color;
-    for (let i = 0; i < threatLevel; i++) {
-        ctx.beginPath();
-        ctx.arc(30 + i * 18, 60, 5, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Text
-    ctx.font = 'bold 26px Nunito, sans-serif';
-    ctx.fillStyle = '#1F2937';
+    // Name — bold serif, white with colored glow
+    ctx.font = '700 30px "Noto Serif", Georgia, serif';
+    ctx.fillStyle = '#FFFFFF';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${emoji} ${name}`, 155, 35);
+    ctx.fillText(`${emoji} ${name}`, 180, 28);
+
+    // Second pass with dark shadow for crispness
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.fillText(`${emoji} ${name}`, 180, 28);
+
+    // Threat dots — centered beneath name
+    ctx.shadowColor = 'transparent';
+    const totalWidth = threatLevel * 11;
+    const startX = 180 - totalWidth / 2;
+    for (let i = 0; i < threatLevel; i++) {
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(startX + i * 11 + 4, 56, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;

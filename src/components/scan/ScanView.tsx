@@ -5,6 +5,16 @@ import { identifyPlant, generatePersonality } from '../../services/gemini';
 import { getNextAvailableSlot } from '../../services/mockData';
 import type { PlantCharacter } from '../../types';
 import { colors } from '../../constants/colors';
+import {
+    Camera,
+    ScanSearch,
+    Sprout,
+    Leaf,
+    PartyPopper,
+    Plus,
+    Coins,
+    X,
+} from 'lucide-react';
 
 type ScanState = 'camera' | 'capturing' | 'identifying' | 'naming' | 'done';
 
@@ -121,25 +131,25 @@ export function ScanView() {
 
     return (
         <div className="scan-overlay">
-            <button className="scan-close-btn" onClick={handleClose}>✕</button>
+            <button className="scan-close-btn" onClick={handleClose}><X size={18} /></button>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
             {scanState === 'camera' && (
                 <>
                     <video ref={videoRef} className="scan-video" autoPlay playsInline muted />
-                    <div className="scan-guide">📸 Point at your plant</div>
+                    <div className="scan-guide"><Camera size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Point at your plant</div>
                     <div className="scan-guide-sub">Make sure the plant is well-lit and centered</div>
                     <button className="scan-capture-btn" onClick={handleCapture} />
                 </>
             )}
 
             {scanState === 'capturing' && (
-                <div className="scan-guide">📷 Capturing...</div>
+                <div className="scan-guide"><Camera size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />Capturing...</div>
             )}
 
             {scanState === 'identifying' && (
                 <div style={{ textAlign: 'center' }}>
-                    <div className="scan-identifying-icon">🔍</div>
+                    <div className="scan-identifying-icon"><ScanSearch size={48} /></div>
                     <div className="scan-guide">Identifying your plant...</div>
                     <div className="scan-guide-sub">Our AI botanist is analyzing the photo</div>
                 </div>
@@ -147,7 +157,7 @@ export function ScanView() {
 
             {scanState === 'naming' && identResult && personalityResult && (
                 <div className="scan-result-card">
-                    <div className="scan-result-emoji">🌿</div>
+                    <div className="scan-result-icon"><Leaf size={44} /></div>
                     <div className="scan-result-name">
                         {identResult.commonName}
                     </div>
@@ -178,17 +188,20 @@ export function ScanView() {
 
                     <button
                         className="action-btn primary"
-                        style={{ width: '100%', padding: '14px', fontSize: '1rem' }}
+                        style={{ width: '100%', padding: '14px', fontSize: '1rem', gap: '8px' }}
                         onClick={handleConfirm}
                     >
-                        🌱 Add to Garden (+100 coins)
+                        <Sprout size={18} /> Add to Garden
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginLeft: '4px', opacity: 0.8 }}>
+                            (<Plus size={12} /><Coins size={14} />100)
+                        </span>
                     </button>
                 </div>
             )}
 
             {scanState === 'done' && (
                 <div style={{ textAlign: 'center' }}>
-                    <div className="scan-done-icon">🎉</div>
+                    <div className="scan-done-icon"><PartyPopper size={56} /></div>
                     <div className="scan-guide">Welcome to the garden!</div>
                     <div className="scan-guide-sub">+100 coins earned</div>
                 </div>

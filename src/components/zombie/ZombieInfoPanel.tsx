@@ -1,5 +1,16 @@
 // Plantasia: Guardians — Zombie Info Panel
 import { useGameStore } from '../../stores/gameStore';
+import {
+    Skull,
+    Microscope,
+    HelpCircle,
+    AlertTriangle,
+    Dna,
+    Swords,
+    BookOpen,
+    Star,
+    X,
+} from 'lucide-react';
 
 export function ZombieInfoPanel() {
     const selectedZombieId = useGameStore(s => s.selectedZombieId);
@@ -24,23 +35,27 @@ export function ZombieInfoPanel() {
         <div className="panel-overlay" onClick={handleClose}>
             <div className="panel" onClick={e => e.stopPropagation()}>
                 <div className="panel-header">
-                    <h2>{zombie.emoji} Zombie Alert!</h2>
-                    <button className="panel-close" onClick={handleClose}>✕</button>
+                    <h2><Skull size={22} /> Zombie Alert!</h2>
+                    <button className="panel-close" onClick={handleClose}><X size={16} /></button>
                 </div>
                 <div className="panel-body">
                     {/* Zombie Header */}
                     <div className="zombie-header">
                         <div className="zombie-avatar" style={{ background: `${zombie.color}20`, border: `3px solid ${zombie.color}` }}>
-                            {zombie.emoji}
+                            <Skull size={32} color={zombie.color} />
                         </div>
                         <div>
                             <div className="zombie-name" style={{ color: zombie.color }}>{zombie.name}</div>
                             <div className="zombie-subtitle">{zombie.subtitle}</div>
                             <div className="threat-stars">
                                 {Array.from({ length: 5 }).map((_, i) => (
-                                    <span key={i} style={{ fontSize: '14px' }}>
-                                        {i < zombie.threatLevel ? '⭐' : '☆'}
-                                    </span>
+                                    <Star
+                                        key={i}
+                                        size={14}
+                                        fill={i < zombie.threatLevel ? '#FBBF24' : 'none'}
+                                        color={i < zombie.threatLevel ? '#FBBF24' : '#D1D5DB'}
+                                        strokeWidth={1.5}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -48,19 +63,19 @@ export function ZombieInfoPanel() {
 
                     {/* Disease Info */}
                     <div className="lore-section">
-                        <h4>🔬 What is it?</h4>
-                        <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{zombie.lore.whatIsIt}</p>
+                        <h4><Microscope size={16} /> What is it?</h4>
+                        <p style={{ fontSize: '1.02rem', lineHeight: 1.55 }}>{zombie.lore.whatIsIt}</p>
                     </div>
 
                     <div className="lore-section">
-                        <h4>🤔 Why does it happen?</h4>
-                        <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{zombie.lore.whyItHappens}</p>
+                        <h4><HelpCircle size={16} /> Why does it happen?</h4>
+                        <p style={{ fontSize: '1.02rem', lineHeight: 1.55 }}>{zombie.lore.whyItHappens}</p>
                     </div>
 
                     {/* Early Warnings */}
                     <div className="lore-section">
-                        <h4>⚠️ Early Warning Signs</h4>
-                        <ul style={{ paddingLeft: '16px', fontSize: '0.85rem', lineHeight: 1.8 }}>
+                        <h4><AlertTriangle size={16} /> Early Warning Signs</h4>
+                        <ul style={{ paddingLeft: '16px', fontSize: '1rem', lineHeight: 1.8 }}>
                             {zombie.lore.earlyWarnings.map((w, i) => (
                                 <li key={i}>{w}</li>
                             ))}
@@ -69,14 +84,14 @@ export function ZombieInfoPanel() {
 
                     {/* Science Section */}
                     <div className="edu-card">
-                        <div className="edu-card-title">🧬 The Science</div>
+                        <div className="edu-card-title"><Dna size={16} /> The Science</div>
                         <p>{zombie.lore.science}</p>
                     </div>
 
                     {/* Defeat Steps */}
                     <div style={{ marginTop: '16px' }}>
-                        <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '8px' }}>
-                            ⚔️ How to Defeat {zombie.name}
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Swords size={18} /> How to Defeat {zombie.name}
                         </h4>
                         <ul className="defeat-steps">
                             {zombie.defeatSteps.map((step, i) => (
@@ -91,16 +106,16 @@ export function ZombieInfoPanel() {
                     {/* Defeat Button */}
                     <button
                         className="action-btn primary"
-                        style={{ width: '100%', marginTop: '20px', padding: '14px', fontSize: '1rem' }}
+                        style={{ width: '100%', marginTop: '20px', padding: '14px', fontSize: '1rem', gap: '8px' }}
                         onClick={handleDefeat}
                     >
-                        ⚔️ Mark as Defeated (+50 coins)
+                        <Swords size={18} /> Mark as Defeated (+50 coins)
                     </button>
 
                     {/* Backstory */}
                     <div className="lore-section" style={{ marginTop: '16px' }}>
-                        <h4>📖 Backstory</h4>
-                        <p style={{ fontSize: '0.85rem', lineHeight: 1.5, fontStyle: 'italic' }}>{zombie.lore.backstory}</p>
+                        <h4><BookOpen size={16} /> Backstory</h4>
+                        <p style={{ fontSize: '1rem', lineHeight: 1.55, fontStyle: 'italic' }}>{zombie.lore.backstory}</p>
                     </div>
                 </div>
             </div>

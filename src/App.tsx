@@ -11,21 +11,40 @@ import { ScanView } from './components/scan/ScanView';
 import { useGameStore } from './stores/gameStore';
 import { getSensorBridge } from './services/sensorBridge';
 import type { GameEvent } from './types';
+import {
+    Skull,
+    Swords,
+    PartyPopper,
+    Heart,
+    Shield,
+    Sprout,
+    Coins,
+    Gamepad2,
+    Radio,
+    Hand,
+    Droplets,
+    CloudSun,
+    CircleCheck,
+    CircleStop,
+    Plus,
+    X,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-// Toast messages with emoji animations
-const toastConfig: Record<string, { message: string, icon: string, color: string }> = {
-    zombie_spawned: { message: 'A zombie has appeared!', icon: '🧟', color: '#EF4444' },
-    zombie_defeated: { message: 'Zombie defeated! +50 coins', icon: '⚔️', color: '#22C55E' },
-    quest_completed: { message: 'Quest completed!', icon: '🎉', color: '#FBBF24' },
-    plant_touched: { message: 'Plant says hello! +15 coins', icon: '🤗', color: '#F472B6' },
-    shield_built: { message: 'Shield strength increasing!', icon: '🛡️', color: '#38BDF8' },
-    plant_added: { message: 'New plant added to garden!', icon: '🌱', color: '#22C55E' },
-    coins_earned: { message: 'Coins earned!', icon: '🪙', color: '#FBBF24' },
+// Toast messages with Lucide icons
+const toastConfig: Record<string, { message: string, Icon: LucideIcon, color: string }> = {
+    zombie_spawned: { message: 'A zombie has appeared!', Icon: Skull, color: '#EF4444' },
+    zombie_defeated: { message: 'Zombie defeated! +50 coins', Icon: Swords, color: '#22C55E' },
+    quest_completed: { message: 'Quest completed!', Icon: PartyPopper, color: '#FBBF24' },
+    plant_touched: { message: 'Plant says hello! +15 coins', Icon: Heart, color: '#F472B6' },
+    shield_built: { message: 'Shield strength increasing!', Icon: Shield, color: '#38BDF8' },
+    plant_added: { message: 'New plant added to garden!', Icon: Sprout, color: '#22C55E' },
+    coins_earned: { message: 'Coins earned!', Icon: Coins, color: '#FBBF24' },
 };
 
 function GameToast({ event }: { event: GameEvent }) {
     const [visible, setVisible] = useState(true);
-    const config = toastConfig[event.type] || { message: 'Something happened!', icon: '✨', color: '#3B82F6' };
+    const config = toastConfig[event.type] || { message: 'Something happened!', Icon: Sprout, color: '#3B82F6' };
 
     useEffect(() => {
         const timer = setTimeout(() => setVisible(false), 3500);
@@ -34,9 +53,11 @@ function GameToast({ event }: { event: GameEvent }) {
 
     if (!visible) return null;
 
+    const { Icon } = config;
+
     return (
         <div className="game-toast" style={{ borderLeftColor: config.color }}>
-            <span className="toast-icon">{config.icon}</span>
+            <span className="toast-icon"><Icon size={18} color={config.color} /></span>
             <span>{config.message}</span>
         </div>
     );
@@ -56,7 +77,7 @@ function DemoControls({ sensorConnection, onConnectSim, onConnectBLE, onDisconne
     return (
         <div className={`demo-controls ${expanded ? 'expanded' : ''}`}>
             <button className="demo-toggle" onClick={() => setExpanded(!expanded)}>
-                {expanded ? '✕' : '🎮'}
+                {expanded ? <X size={18} /> : <Gamepad2 size={18} />}
             </button>
             {expanded && (
                 <div className="demo-panel">
@@ -64,34 +85,34 @@ function DemoControls({ sensorConnection, onConnectSim, onConnectBLE, onDisconne
                     {sensorConnection === 'disconnected' ? (
                         <div className="demo-group">
                             <button className="demo-btn primary" onClick={onConnectSim}>
-                                <span>🎮</span> Start Demo
+                                <Gamepad2 size={16} /> Start Demo
                             </button>
                             <button className="demo-btn" onClick={onConnectBLE}>
-                                <span>📡</span> Real Sensor
+                                <Radio size={16} /> Real Sensor
                             </button>
                         </div>
                     ) : (
                         <>
                             <div className="demo-group">
                                 <button className="demo-btn success" onClick={onTouch}>
-                                    <span>👆</span> Touch Plant
+                                    <Hand size={16} /> Touch Plant
                                 </button>
                             </div>
                             <div className="demo-group">
                                 <div className="demo-label">Moisture Simulation</div>
                                 <button className="demo-btn danger" onClick={() => onMoisture('rising')}>
-                                    <span>💧</span> Overwater
+                                    <Droplets size={16} /> Overwater
                                 </button>
                                 <button className="demo-btn warning" onClick={() => onMoisture('falling')}>
-                                    <span>🏜️</span> Dry Out
+                                    <CloudSun size={16} /> Dry Out
                                 </button>
                                 <button className="demo-btn success" onClick={() => onMoisture('stable')}>
-                                    <span>✅</span> Healthy
+                                    <CircleCheck size={16} /> Healthy
                                 </button>
                             </div>
                             <div className="demo-group">
                                 <button className="demo-btn" onClick={onDisconnect}>
-                                    <span>⏹️</span> Stop Demo
+                                    <CircleStop size={16} /> Stop Demo
                                 </button>
                             </div>
                         </>
@@ -161,10 +182,15 @@ export function App() {
             {/* HUD Overlay */}
             <GardenHUD />
 
-            {/* Add Plant Button */}
+            {/* Add Plant Button — Scanner Portal */}
             <button className="add-plant-btn" onClick={() => setActivePanel('scan')}>
-                <span className="add-icon">+</span>
-                <span className="add-label">Add Plant</span>
+                <span className="add-btn-ring" />
+                <span className="add-btn-ring add-btn-ring-2" />
+                <span className="add-btn-ring add-btn-ring-3" />
+                <span className="add-btn-core">
+                    <Sprout size={26} strokeWidth={2.5} />
+                </span>
+                <span className="add-btn-label">Scan</span>
             </button>
 
             {/* Game Toast */}

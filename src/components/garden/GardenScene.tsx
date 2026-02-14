@@ -61,19 +61,19 @@ function Clouds() {
                 <group key={i} position={[c.x, c.y, c.z]} scale={c.scale}>
                     <mesh position={[0, 0, 0]}>
                         <sphereGeometry args={[0.5, 8, 8]} />
-                        <meshStandardMaterial color="#ffffff" transparent opacity={0.9} />
+                        <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
                     </mesh>
                     <mesh position={[0.4, 0.1, 0]}>
                         <sphereGeometry args={[0.4, 8, 8]} />
-                        <meshStandardMaterial color="#ffffff" transparent opacity={0.9} />
+                        <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
                     </mesh>
                     <mesh position={[-0.35, 0.05, 0]}>
                         <sphereGeometry args={[0.35, 8, 8]} />
-                        <meshStandardMaterial color="#ffffff" transparent opacity={0.9} />
+                        <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
                     </mesh>
                     <mesh position={[0.15, 0.25, 0]}>
                         <sphereGeometry args={[0.3, 8, 8]} />
-                        <meshStandardMaterial color="#ffffff" transparent opacity={0.9} />
+                        <meshStandardMaterial color="#ffffff" transparent opacity={0.5} />
                     </mesh>
                 </group>
             ))}
@@ -257,7 +257,7 @@ function Fence() {
                     </mesh>
                 </group>
             ))}
-            {/* Horizontal rails */}
+            {/* Horizontal rails (front and back) */}
             {[-5, 5].map((z, i) => (
                 <group key={`rail-${i}`}>
                     <mesh position={[0, 0.3, z]}>
@@ -266,6 +266,19 @@ function Fence() {
                     </mesh>
                     <mesh position={[0, 0.55, z]}>
                         <boxGeometry args={[10, 0.08, 0.06]} />
+                        <meshStandardMaterial color="#D4B896" />
+                    </mesh>
+                </group>
+            ))}
+            {/* Side rails (left and right) */}
+            {[-5, 5].map((x, i) => (
+                <group key={`side-rail-${i}`}>
+                    <mesh position={[x, 0.3, 0]}>
+                        <boxGeometry args={[0.06, 0.08, 10]} />
+                        <meshStandardMaterial color="#D4B896" />
+                    </mesh>
+                    <mesh position={[x, 0.55, 0]}>
+                        <boxGeometry args={[0.06, 0.08, 10]} />
                         <meshStandardMaterial color="#D4B896" />
                     </mesh>
                 </group>
