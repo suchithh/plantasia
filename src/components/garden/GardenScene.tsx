@@ -1,5 +1,6 @@
 // Plantasia: Guardians — 3D Garden Scene
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { MapControls } from '@react-three/drei';
 import { PlantModel } from './PlantModel';
 import { ZombieModel } from './ZombieModel';
 import { useGameStore } from '../../stores/gameStore';
@@ -172,53 +173,302 @@ function Sparkles() {
     );
 }
 
-function Ground() {
+// Grass tufts — small blade clusters scattered on terrain
+function GrassTufts() {
+    const groupRef = useRef<THREE.Group>(null);
+    const tufts = useMemo(() => {
+        const result: { x: number; z: number; scale: number; rot: number; color: string }[] = [];
+        const rng = (seed: number) => {
+            let s = seed;
+            return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+        };
+        const rand = rng(42);
+        const colors = ['#5B9A42', '#6DAD52', '#4E8B35', '#78B85E', '#3D7A2B'];
+        for (let i = 0; i < 120; i++) {
+            const angle = rand() * Math.PI * 2;
+            const dist = 5.5 + rand() * 14;
+            result.push({
+                x: Math.cos(angle) * dist,
+                z: Math.sin(angle) * dist,
+                scale: 0.15 + rand() * 0.25,
+                rot: rand() * Math.PI,
+                color: colors[Math.floor(rand() * colors.length)],
+            });
+        }
+        return result;
+    }, []);
+
+    useFrame(() => {
+        if (groupRef.current) {
+            const t = performance.now() * 0.0008;
+            groupRef.current.children.forEach((tuft, i) => {
+                tuft.rotation.z = Math.sin(t + i * 0.7) * 0.06;
+            });
+        }
+    });
+
+    return (
+        <group ref={groupRef}>
+            {tufts.map((t, i) => (
+                <group key={i} position={[t.x, -0.4, t.z]} rotation={[0, t.rot, 0]} scale={t.scale}>
+                    {/* 3 blades per tuft */}
+                    <mesh position={[0, 0.15, 0]}>
+                        <coneGeometry args={[0.06, 0.4, 3]} />
+                        <meshStandardMaterial color={t.color} />
+                    </mesh>
+                    <mesh position={[-0.04, 0.12, 0.02]} rotation={[0, 0, 0.15]}>
+                        <coneGeometry args={[0.05, 0.3, 3]} />
+                        <meshStandardMaterial color={t.color} />
+                    </mesh>
+                    <mesh position={[0.04, 0.1, -0.02]} rotation={[0, 0, -0.12]}>
+                        <coneGeometry args={[0.045, 0.25, 3]} />
+                        <meshStandardMaterial color={t.color} />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+// Trees outside the fence
+function OuterTrees() {
+    const trees = useMemo(() => [
+        { x: -8, z: -8, scale: 1.2, trunkH: 1.8, color: '#2D8B3E' },
+        { x: 9, z: -7, scale: 0.9, trunkH: 1.5, color: '#3A9E4A' },
+        { x: -9, z: 7, scale: 1.0, trunkH: 1.6, color: '#267A34' },
+        { x: 8, z: 9, scale: 1.1, trunkH: 1.7, color: '#35934A' },
+        { x: -12, z: 0, scale: 0.85, trunkH: 1.4, color: '#2E8F3F' },
+        { x: 11, z: 2, scale: 1.3, trunkH: 2.0, color: '#1E7A2E' },
+        { x: 0, z: -10, scale: 0.7, trunkH: 1.2, color: '#4AAD5C' },
+        { x: -7, z: 11, scale: 0.95, trunkH: 1.5, color: '#338C42' },
+        { x: 7, z: -12, scale: 0.75, trunkH: 1.3, color: '#2A8636' },
+        { x: -14, z: -6, scale: 1.15, trunkH: 1.9, color: '#247830' },
+        { x: 13, z: -3, scale: 0.8, trunkH: 1.35, color: '#3DA04E' },
+        { x: -6, z: -13, scale: 1.0, trunkH: 1.6, color: '#2B8838' },
+    ], []);
+
     return (
         <group>
-            {/* Extended grass — fills entire visible area */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.52, 0]} receiveShadow>
-                <planeGeometry args={[80, 80]} />
-                <meshStandardMaterial color="#6AAF55" />
-            </mesh>
-            {/* Main garden grass */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-                <planeGeometry args={[30, 30]} />
-                <meshStandardMaterial color="#7EC668" />
-            </mesh>
-            {/* Grass texture variation — inner */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.49, 0]}>
-                <planeGeometry args={[22, 22]} />
-                <meshStandardMaterial color="#8BD674" transparent opacity={0.5} />
-            </mesh>
-            {/* Scattered darker patches for depth at distance */}
-            {[
-                [-12, -12, 0.6], [14, -10, 0.5], [-10, 14, 0.45], [15, 12, 0.55],
-                [-18, 5, 0.4], [20, -5, 0.35], [8, -18, 0.5], [-8, 20, 0.45],
-            ].map(([x, z, op], i) => (
-                <mesh key={`patch-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, -0.51, z]}>
-                    <circleGeometry args={[3 + i * 0.4, 16]} />
-                    <meshStandardMaterial color="#5A9E48" transparent opacity={op} />
+            {trees.map((t, i) => (
+                <group key={i} position={[t.x, -0.5, t.z]} scale={t.scale}>
+                    {/* Trunk */}
+                    <mesh position={[0, t.trunkH / 2, 0]} castShadow>
+                        <cylinderGeometry args={[0.12, 0.18, t.trunkH, 6]} />
+                        <meshStandardMaterial color="#8B6914" />
+                    </mesh>
+                    {/* Canopy layers — stacked spheres for full foliage */}
+                    <mesh position={[0, t.trunkH * 0.7, 0]} castShadow>
+                        <sphereGeometry args={[0.8, 8, 8]} />
+                        <meshStandardMaterial color={t.color} flatShading />
+                    </mesh>
+                    <mesh position={[0.2, t.trunkH * 0.85, -0.1]} castShadow>
+                        <sphereGeometry args={[0.6, 8, 8]} />
+                        <meshStandardMaterial color={new THREE.Color(t.color).multiplyScalar(1.1).getStyle()} flatShading />
+                    </mesh>
+                    <mesh position={[-0.15, t.trunkH * 0.95, 0.15]}>
+                        <sphereGeometry args={[0.5, 8, 8]} />
+                        <meshStandardMaterial color={new THREE.Color(t.color).multiplyScalar(0.85).getStyle()} flatShading />
+                    </mesh>
+                    {/* Shadow on ground */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+                        <circleGeometry args={[0.6, 12]} />
+                        <meshStandardMaterial color="#000000" transparent opacity={0.12} />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+// Bushes scattered outside fence
+function OuterBushes() {
+    const bushes = useMemo(() => {
+        const result: { x: number; z: number; scale: number; color: string }[] = [];
+        const positions = [
+            [-6.5, -5.5], [6.5, -6], [-6, 6.5], [7, 6],
+            [-10, 3], [10, -4], [5, -9], [-5, 9],
+            [-8, -3], [9, 4], [-3, -8], [3, 8],
+            [-11, -8], [12, 7], [-7, -10], [8, 12],
+        ];
+        const colors = ['#3E8E41', '#4A9E52', '#2D7E33', '#56AE60', '#357E3E'];
+        positions.forEach(([x, z], i) => {
+            result.push({ x, z, scale: 0.4 + (i % 5) * 0.12, color: colors[i % colors.length] });
+        });
+        return result;
+    }, []);
+
+    return (
+        <group>
+            {bushes.map((b, i) => (
+                <group key={i} position={[b.x, -0.35, b.z]} scale={b.scale}>
+                    <mesh castShadow>
+                        <sphereGeometry args={[0.6, 8, 8]} />
+                        <meshStandardMaterial color={b.color} flatShading />
+                    </mesh>
+                    <mesh position={[0.3, 0.05, 0.15]}>
+                        <sphereGeometry args={[0.4, 7, 7]} />
+                        <meshStandardMaterial color={new THREE.Color(b.color).multiplyScalar(1.15).getStyle()} flatShading />
+                    </mesh>
+                    <mesh position={[-0.25, -0.05, -0.1]}>
+                        <sphereGeometry args={[0.35, 7, 7]} />
+                        <meshStandardMaterial color={new THREE.Color(b.color).multiplyScalar(0.9).getStyle()} flatShading />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+// Wildflowers scattered outside the fence
+function WildFlowers() {
+    const flowers = useMemo(() => {
+        const result: { x: number; z: number; color: string; h: number }[] = [];
+        const rng = (seed: number) => {
+            let s = seed;
+            return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+        };
+        const rand = rng(99);
+        const colors = ['#E879A8', '#F0AD4E', '#D4A5E0', '#7FBFDF', '#F5C542', '#E06B6B'];
+        for (let i = 0; i < 30; i++) {
+            const angle = rand() * Math.PI * 2;
+            const dist = 5.8 + rand() * 10;
+            result.push({
+                x: Math.cos(angle) * dist,
+                z: Math.sin(angle) * dist,
+                color: colors[Math.floor(rand() * colors.length)],
+                h: 0.15 + rand() * 0.2,
+            });
+        }
+        return result;
+    }, []);
+
+    return (
+        <group>
+            {flowers.map((f, i) => (
+                <group key={i} position={[f.x, -0.42, f.z]}>
+                    {/* Tiny stem */}
+                    <mesh position={[0, f.h / 2, 0]}>
+                        <cylinderGeometry args={[0.01, 0.015, f.h, 4]} />
+                        <meshStandardMaterial color="#4A8C3F" />
+                    </mesh>
+                    {/* Flower head */}
+                    <mesh position={[0, f.h + 0.03, 0]}>
+                        <sphereGeometry args={[0.04, 6, 6]} />
+                        <meshStandardMaterial color={f.color} />
+                    </mesh>
+                </group>
+            ))}
+        </group>
+    );
+}
+
+// Dirt path leading to the garden gate
+function GardenPath() {
+    const segments = useMemo(() => {
+        const pts: { x: number; z: number; w: number }[] = [];
+        for (let i = 0; i < 8; i++) {
+            pts.push({
+                x: 0 + Math.sin(i * 0.4) * 0.3,
+                z: -5.5 - i * 1.2,
+                w: 1.0 + Math.sin(i * 0.8) * 0.2,
+            });
+        }
+        return pts;
+    }, []);
+
+    return (
+        <group>
+            {segments.map((s, i) => (
+                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[s.x, -0.495, s.z]}>
+                    <planeGeometry args={[s.w, 1.3]} />
+                    <meshStandardMaterial color="#C4955A" />
                 </mesh>
             ))}
-            {/* Garden path */}
+            {/* Stepping stones along path */}
+            {segments.filter((_, i) => i % 2 === 0).map((s, i) => (
+                <mesh key={`stone-${i}`} rotation={[-Math.PI / 2, 0, Math.random()]} position={[s.x + (i % 2 ? 0.15 : -0.1), -0.49, s.z]}>
+                    <circleGeometry args={[0.15, 6]} />
+                    <meshStandardMaterial color="#B8A58C" />
+                </mesh>
+            ))}
+        </group>
+    );
+}
+
+function Ground() {
+    // Generate a procedural grass texture for the extended ground
+    const grassTexture = useMemo(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d')!;
+        // Base color
+        ctx.fillStyle = '#6AAF55';
+        ctx.fillRect(0, 0, 512, 512);
+        // Add noise-like variation
+        const rng = (seed: number) => {
+            let s = seed;
+            return () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+        };
+        const rand = rng(7);
+        for (let i = 0; i < 3000; i++) {
+            const x = rand() * 512;
+            const y = rand() * 512;
+            const r = 1 + rand() * 4;
+            const shade = rand() > 0.5 ? 'rgba(90,160,60,0.3)' : 'rgba(50,120,40,0.25)';
+            ctx.fillStyle = shade;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Add lighter flecks
+        for (let i = 0; i < 800; i++) {
+            const x = rand() * 512;
+            const y = rand() * 512;
+            ctx.fillStyle = 'rgba(140,210,100,0.2)';
+            ctx.beginPath();
+            ctx.arc(x, y, 1 + rand() * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(6, 6);
+        return tex;
+    }, []);
+
+    return (
+        <group>
+            {/* Extended grass — textured, fills visible area */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.52, 0]} receiveShadow>
+                <planeGeometry args={[80, 80]} />
+                <meshStandardMaterial map={grassTexture} color="#6AAF55" />
+            </mesh>
+            {/* Main garden grass — slightly elevated, brighter */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
+                <planeGeometry args={[10, 10]} />
+                <meshStandardMaterial color="#7EC668" />
+            </mesh>
+            {/* Inner grass highlight */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.49, 0]}>
+                <planeGeometry args={[8, 8]} />
+                <meshStandardMaterial color="#8BD674" transparent opacity={0.45} />
+            </mesh>
+            {/* Garden path ring */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 0]}>
                 <ringGeometry args={[3.5, 4.2, 32]} />
                 <meshStandardMaterial color="#D4A574" />
             </mesh>
-            {/* Planting spots with better styling */}
+            {/* Planting spots */}
             {[[-2, 0], [0, 0], [2, 0], [-2, 2], [0, 2], [2, 2], [-2, -2], [0, -2], [2, -2]].map(([x, z], i) => (
                 <group key={i} position={[x, -0.47, z]}>
-                    {/* Soil circle */}
                     <mesh rotation={[-Math.PI / 2, 0, 0]}>
                         <circleGeometry args={[0.75, 32]} />
                         <meshStandardMaterial color="#6B4423" />
                     </mesh>
-                    {/* Soil inner */}
                     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
                         <circleGeometry args={[0.6, 32]} />
                         <meshStandardMaterial color="#8B5A2B" />
                     </mesh>
-                    {/* Decorative stones */}
                     {[0, 1.2, 2.4, 3.6, 5].map((angle, j) => (
                         <mesh key={j} position={[Math.cos(angle) * 0.68, 0.02, Math.sin(angle) * 0.68]} rotation={[-Math.PI / 2, 0, 0]}>
                             <circleGeometry args={[0.05, 6]} />
@@ -392,6 +642,28 @@ function Rocks() {
     );
 }
 
+// Clamps camera pan so it never drifts or rotates
+function CameraClamp() {
+    const { camera } = useThree();
+    // The camera offset from target — [10,10,10] looking at origin = this offset
+    const offset = useMemo(() => new THREE.Vector3(10, 10, 10), []);
+
+    useFrame(() => {
+        // Derive where the camera is "looking at" by subtracting the fixed offset
+        const target = camera.position.clone().sub(offset);
+        // Clamp the target position
+        const clampedX = Math.max(-3, Math.min(3, target.x));
+        const clampedZ = Math.max(-3, Math.min(3, target.z));
+        // If target drifted out of bounds, snap camera back
+        if (target.x !== clampedX || target.z !== clampedZ || target.y !== 0) {
+            camera.position.set(clampedX + offset.x, offset.y, clampedZ + offset.z);
+            camera.lookAt(clampedX, 0, clampedZ);
+        }
+    });
+
+    return null;
+}
+
 function SceneContent() {
     const plants = useGameStore(s => s.plants);
     const zombies = useGameStore(s => s.zombies);
@@ -400,6 +672,20 @@ function SceneContent() {
 
     return (
         <>
+            {/* Camera controls — pan and zoom only, all rotation killed */}
+            <MapControls
+                enableRotate={false}
+                enableDamping
+                dampingFactor={0.15}
+                minZoom={75}
+                maxZoom={160}
+                panSpeed={0.6}
+                screenSpacePanning={false}
+                mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
+                touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }}
+            />
+            <CameraClamp />
+
             {/* Sky dome — eliminates void */}
             <SkyDome />
 
@@ -428,6 +714,12 @@ function SceneContent() {
             <Flowers />
             <Mushrooms />
             <Rocks />
+            {/* Outer terrain — life beyond the fence */}
+            <GrassTufts />
+            <OuterTrees />
+            <OuterBushes />
+            <WildFlowers />
+            <GardenPath />
 
             {plants.map(plant => (
                 <PlantModel
@@ -453,8 +745,8 @@ export function GardenScene() {
         <Canvas
             shadows
             orthographic
-            camera={{ position: [10, 10, 10], zoom: 75, near: 0.1, far: 100 }}
-            style={{ width: '100%', height: '100%', background: 'linear-gradient(180deg, #7DD3FC 0%, #BAE6FD 40%, #FEF3C7 100%)' }}
+            camera={{ position: [10, 10, 10], zoom: 85, near: 0.1, far: 100 }}
+            style={{ width: '100%', height: '100%', cursor: 'grab', background: 'linear-gradient(180deg, #7DD3FC 0%, #BAE6FD 40%, #FEF3C7 100%)' }}
             gl={{ antialias: true, alpha: false }}
             onCreated={({ camera }) => {
                 camera.lookAt(0, 0, 0);
