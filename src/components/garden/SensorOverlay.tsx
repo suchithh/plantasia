@@ -49,7 +49,17 @@ export function SensorOverlay() {
                         color: template.color,
                         emoji: template.emoji,
                         defeatSteps: template.defeatSteps,
-                        position: { x: (Math.random() - 0.5) * 8, y: 0, z: (Math.random() - 0.5) * 8 },
+                        position: (() => {
+                            const side = Math.floor(Math.random() * 4);
+                            const along = (Math.random() - 0.5) * 10;
+                            const out = 6 + Math.random() * 2;
+                            switch (side) {
+                                case 0: return { x: along, y: 0, z: -out };
+                                case 1: return { x: along, y: 0, z: out };
+                                case 2: return { x: -out, y: 0, z: along };
+                                default: return { x: out, y: 0, z: along };
+                            }
+                        })(),
                         progress: 0,
                     };
                     spawnZombie(newZombie);

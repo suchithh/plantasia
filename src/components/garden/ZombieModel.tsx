@@ -3,6 +3,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { ZombieEnemy } from '../../types';
+import { useGameStore } from '../../stores/gameStore';
 import * as THREE from 'three';
 
 interface ZombieModelProps {
@@ -98,6 +99,8 @@ export function ZombieModel({ zombie, onClick }: ZombieModelProps) {
     const jawRef = useRef<THREE.Group>(null);
     const dangerRingRef = useRef<THREE.Mesh>(null);
 
+    const targetPlant = useGameStore(s => s.plants.find(p => p.id === zombie.targetPlantId));
+
     const nameTexture = useMemo(
         () => createZombieNameTexture(zombie.name, zombie.emoji, zombie.color, zombie.threatLevel),
         [zombie.name, zombie.emoji, zombie.color, zombie.threatLevel]
@@ -112,6 +115,17 @@ export function ZombieModel({ zombie, onClick }: ZombieModelProps) {
             groupRef.current.rotation.z += (1.2 - groupRef.current.rotation.z) * 0.05;
             groupRef.current.scale.lerp(new THREE.Vector3(0.5, 0.5, 0.5), 0.03);
             return;
+        }
+
+        // Slow creep toward target plant
+        if (targetPlant) {
+            const dx = targetPlant.position.x - groupRef.current.position.x;
+            const dz = targetPlant.position.z - groupRef.current.position.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist > 2) {
+                groupRef.current.position.x += dx * 0.0004;
+                groupRef.current.position.z += dz * 0.0004;
+            }
         }
 
         // Menacing hover — bouncy, springy motion

@@ -86,7 +86,7 @@ export const mockZombies: ZombieEnemy[] = [
         color: drownfaceTemplate.color,
         emoji: drownfaceTemplate.emoji,
         defeatSteps: drownfaceTemplate.defeatSteps,
-        position: { x: -4, y: 0, z: 4 },
+        position: { x: -7, y: 0, z: 7 },
         progress: 0.3,
     },
 ];

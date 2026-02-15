@@ -4,7 +4,7 @@ import { MapControls } from '@react-three/drei';
 import { PlantModel } from './PlantModel';
 import { ZombieModel } from './ZombieModel';
 import { useGameStore } from '../../stores/gameStore';
-import { Suspense, useRef, useMemo } from 'react';
+import { Suspense, useRef, useMemo, useEffect, useState } from 'react';
 import * as THREE from 'three';
 
 // Sky dome — a huge inverted sphere so there's never any void visible
@@ -642,26 +642,97 @@ function Rocks() {
     );
 }
 
-// Clamps camera pan so it never drifts or rotates
-function CameraClamp() {
+// Handles camera movement, clamping, and cinematic events
+function CinematicCamera() {
     const { camera } = useThree();
-    // The camera offset from target — [10,10,10] looking at origin = this offset
+    const controlsRef = useRef<any>(null);
+    const gameEvents = useGameStore(s => s.gameEvents);
+    const zombies = useGameStore(s => s.zombies);
+
+    // The camera default offset
     const offset = useMemo(() => new THREE.Vector3(10, 10, 10), []);
 
-    useFrame(() => {
-        // Derive where the camera is "looking at" by subtracting the fixed offset
-        const target = camera.position.clone().sub(offset);
-        // Clamp the target position
-        const clampedX = Math.max(-3, Math.min(3, target.x));
-        const clampedZ = Math.max(-3, Math.min(3, target.z));
-        // If target drifted out of bounds, snap camera back
-        if (target.x !== clampedX || target.z !== clampedZ || target.y !== 0) {
-            camera.position.set(clampedX + offset.x, offset.y, clampedZ + offset.z);
-            camera.lookAt(clampedX, 0, clampedZ);
+    // Cutscene state
+    const [targetSubject, setTargetSubject] = useState<{ x: number, z: number } | null>(null);
+
+    // Watch for dramatic events
+    useEffect(() => {
+        const lastEvent = gameEvents[gameEvents.length - 1];
+        if (!lastEvent) return;
+
+        if (lastEvent.type === 'challenger_approaching') {
+            const zombie = zombies.find(z => z.id === lastEvent.zombieId);
+            if (zombie) {
+                setTargetSubject({ x: zombie.position.x, z: zombie.position.z });
+                // Reset after 4s
+                setTimeout(() => setTargetSubject(null), 4000);
+            }
+        }
+    }, [gameEvents, zombies]);
+
+    useFrame((state, delta) => {
+        if (targetSubject) {
+            // Cutscene Mode: Smoothly pan to subject
+            const desiredPos = new THREE.Vector3(targetSubject.x + 5, 5, targetSubject.z + 5); // Zoomed in closer
+            camera.position.lerp(desiredPos, delta * 3);
+
+            // Look at subject
+            const currentLookAt = new THREE.Vector3();
+            camera.getWorldDirection(currentLookAt);
+            const targetLookAt = new THREE.Vector3(targetSubject.x, 0, targetSubject.z);
+
+            // Update controls target to match cutscene focus
+            if (controlsRef.current) {
+                controlsRef.current.target.lerp(targetLookAt, delta * 3);
+                controlsRef.current.update();
+            }
+        } else {
+            // Normal Gameplay Mode: Clamp based on TARGET, not camera position
+            // This ensures we don't change the angle (camera-target offset) when hitting bounds
+            if (controlsRef.current) {
+                const controls = controlsRef.current;
+                const target = controls.target;
+
+                // Clamp the target (the point we're looking at / pivoting around)
+                const clampedX = Math.max(-6, Math.min(6, target.x));
+                const clampedZ = Math.max(-6, Math.min(6, target.z));
+
+                if (target.x !== clampedX || target.z !== clampedZ) {
+                    // Smoothly pull target back to bounds
+                    const newTargetX = THREE.MathUtils.lerp(target.x, clampedX, delta * 10);
+                    const newTargetZ = THREE.MathUtils.lerp(target.z, clampedZ, delta * 10);
+
+                    // Apply offset to camera to maintain rigid angle
+                    // Current offset = Camera - Target
+                    const currentOffset = camera.position.clone().sub(target);
+
+                    // Update target
+                    controls.target.set(newTargetX, 0, newTargetZ);
+
+                    // Update camera to maintain original offset from new target
+                    camera.position.copy(controls.target.clone().add(currentOffset));
+
+                    controls.update();
+                }
+            }
         }
     });
 
-    return null;
+    return (
+        <MapControls
+            ref={controlsRef}
+            enableRotate={false}
+            enableDamping
+            dampingFactor={0.15}
+            minZoom={75}
+            maxZoom={160}
+            panSpeed={0.6}
+            screenSpacePanning={false}
+            mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
+            touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }}
+            enabled={!targetSubject} // Disable user control during cutscene
+        />
+    );
 }
 
 function SceneContent() {
@@ -672,19 +743,8 @@ function SceneContent() {
 
     return (
         <>
-            {/* Camera controls — pan and zoom only, all rotation killed */}
-            <MapControls
-                enableRotate={false}
-                enableDamping
-                dampingFactor={0.15}
-                minZoom={75}
-                maxZoom={160}
-                panSpeed={0.6}
-                screenSpacePanning={false}
-                mouseButtons={{ LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN }}
-                touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN }}
-            />
-            <CameraClamp />
+            {/* Camera controls & Cutscenes */}
+            <CinematicCamera />
 
             {/* Sky dome — eliminates void */}
             <SkyDome />

@@ -27,7 +27,7 @@ export function DailyCheckIn() {
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [stream, setStream] = useState<MediaStream | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
     const [step, setStep] = useState<'camera' | 'analysis'>('camera');
     const [sensorData, setSensorData] = useState<any>(null);
 
@@ -47,7 +47,7 @@ export function DailyCheckIn() {
                 const s = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment', width: 640, height: 480 }
                 });
-                setStream(s);
+                streamRef.current = s;
                 if (videoRef.current) {
                     videoRef.current.srcObject = s;
                 }
@@ -58,15 +58,9 @@ export function DailyCheckIn() {
         startCamera();
 
         return () => {
-            stream?.getTracks().forEach(t => t.stop());
+            streamRef.current?.getTracks().forEach(t => t.stop());
         };
     }, []);
-
-    useEffect(() => {
-        if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
-        }
-    }, [stream, step]);
 
     const handleCapture = async () => {
         if (!videoRef.current || !canvasRef.current || !selectedPlant) return;
@@ -84,7 +78,7 @@ export function DailyCheckIn() {
         const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
         // Stop camera stream to save resources
-        stream?.getTracks().forEach(t => t.stop());
+        streamRef.current?.getTracks().forEach(t => t.stop());
 
         try {
             const raw = await analyzeCheckIn(base64, selectedPlant.species);
@@ -133,7 +127,11 @@ export function DailyCheckIn() {
                         color: template.color,
                         emoji: template.emoji,
                         defeatSteps: result.defeatSteps || template.defeatSteps,
-                        position: { x: selectedPlant.position.x + 3, y: 0, z: selectedPlant.position.z },
+                        position: {
+                            x: selectedPlant.position.x >= 0 ? 7 : -7,
+                            y: 0,
+                            z: selectedPlant.position.z >= 0 ? 7 : -7,
+                        },
                         progress: 0,
                     };
                     spawnZombie(zombie);
@@ -175,7 +173,7 @@ export function DailyCheckIn() {
     };
 
     const handleClose = () => {
-        stream?.getTracks().forEach(t => t.stop());
+        streamRef.current?.getTracks().forEach(t => t.stop());
         setActivePanel('none');
     };
 

@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import type {
     PlantCharacter, ZombieEnemy, Quest, SensorData,
     SensorConnectionState, ActivePanel, ChatMessage, GameEvent,
-    GardenSize, ShopItem, CheckInRecord, CareTask, CheckInAnalysis
+    GardenSize, ShopItem, CheckInRecord, CareTask, CheckInAnalysis,
+    Mood, PlantReaction, QuestActionType
 } from '../types';
 import { mockPlants, mockZombies, mockQuests } from '../services/mockData';
 import { defaultShopItems } from '../services/shopData';
@@ -48,6 +49,8 @@ interface GameState {
     addPlant: (plant: PlantCharacter) => void;
     updatePlantHealth: (id: string, status: PlantCharacter['healthStatus'], happiness: number) => void;
     updatePlantShield: (id: string, strength: number) => void;
+    updatePlantMood: (id: string, mood: Mood) => void;
+    triggerPlantReaction: (id: string, reaction: PlantReaction) => void;
 
     // ─── Actions: Zombies ───
     spawnZombie: (zombie: ZombieEnemy) => void;
@@ -59,6 +62,7 @@ interface GameState {
     completeQuestStep: (questId: string, stepId: string) => void;
     completeQuest: (id: string) => void;
     addQuest: (quest: Quest) => void;
+    triggerQuestAction: (type: QuestActionType, target?: string, value?: number) => void;
 
     // ─── Actions: Sensor ───
     updateSensorData: (data: SensorData) => void;
@@ -112,7 +116,22 @@ export const useGameStore = create<GameState>((set, get) => ({
     gameEvents: [],
 
     // ─── Plant Actions ───
-    addPlant: (plant) => set(s => ({ plants: [...s.plants, plant] })),
+    addPlant: (plant) => set(s => ({ plants: [...s.plants, { ...plant, mood: 'neutral' }] })),
+    updatePlantMood: (id, mood) => set(s => ({
+        plants: s.plants.map(p => p.id === id ? { ...p, mood } : p)
+    })),
+    triggerPlantReaction: (id, reaction) => {
+        set(s => ({
+            plants: s.plants.map(p => p.id === id ? { ...p, activeReaction: reaction } : p)
+        }));
+        // Reset reaction after animation triggers (approx 2s)
+        setTimeout(() => {
+            set(s => ({
+                plants: s.plants.map(p => p.id === id ? { ...p, activeReaction: undefined } : p)
+            }));
+        }, 2000);
+        get().pushGameEvent({ type: 'plant_reaction', plantId: id, reaction });
+    },
     updatePlantHealth: (id, status, happiness) => set(s => ({
         plants: s.plants.map(p => p.id === id ? { ...p, healthStatus: status, happiness } : p),
     })),
@@ -121,7 +140,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
 
     // ─── Zombie Actions ───
-    spawnZombie: (zombie) => set(s => ({ zombies: [...s.zombies, zombie] })),
+    spawnZombie: (zombie) => {
+        set(s => ({ zombies: [...s.zombies, { ...zombie, state: 'spawn_animation' }] }));
+        // Trigger the Smash Bros event
+        get().pushGameEvent({ type: 'challenger_approaching', zombieId: zombie.id, zombieType: zombie.type });
+
+        // After delay, move to fighting state
+        setTimeout(() => {
+            set(s => ({
+                zombies: s.zombies.map(z => z.id === zombie.id ? { ...z, state: 'fighting' } : z)
+            }));
+        }, 8000); // 8s for the dramatic intro (Extended)
+    },
     updateZombieProgress: (id, progress) => set(s => ({
         zombies: s.zombies.map(z => z.id === id ? { ...z, progress: Math.min(1, progress) } : z),
     })),
@@ -133,13 +163,29 @@ export const useGameStore = create<GameState>((set, get) => ({
     activateQuest: (id) => set(s => ({
         quests: s.quests.map(q => q.id === id ? { ...q, active: true } : q),
     })),
-    completeQuestStep: (questId, stepId) => set(s => ({
-        quests: s.quests.map(q =>
-            q.id === questId
-                ? { ...q, steps: q.steps.map(step => step.id === stepId ? { ...step, completed: true } : step) }
-                : q
-        ),
-    })),
+    completeQuestStep: (questId, stepId) => {
+        set(s => ({
+            quests: s.quests.map(q =>
+                q.id === questId
+                    ? { ...q, steps: q.steps.map(step => step.id === stepId ? { ...step, completed: true } : step) }
+                    : q
+            ),
+        }));
+
+        // Auto-complete quest if all steps are done
+        const quest = get().quests.find(q => q.id === questId);
+        if (quest) {
+            const allDone = quest.steps.every(s => s.completed || s.id === stepId && true); // checking new state implies complicated logic with stale closure, 
+            // but we *just* set state. However, get() returns fresh state after set().
+            // Wait, set() is synchronous? Zustand set merges state. get() inside the action will see the *old* state until the next render cycle or if we trust set to have processed?
+            // Actually, best to check the *updated* state.
+            // Let's re-fetch
+            const updatedQuest = get().quests.find(q => q.id === questId);
+            if (updatedQuest && updatedQuest.steps.every(s => s.completed)) {
+                setTimeout(() => get().completeQuest(questId), 500);
+            }
+        }
+    },
     completeQuest: (id) => {
         const quest = get().quests.find(q => q.id === id);
         if (!quest) return;
@@ -152,10 +198,47 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
     },
     addQuest: (quest) => set(s => ({ quests: [...s.quests, quest] })),
+    triggerQuestAction: (type, target, value) => {
+        const state = get();
+        state.quests.forEach(quest => {
+            if (!quest.active || quest.completed) return;
+
+            quest.steps.forEach(step => {
+                if (step.completed || !step.action) return;
+
+                if (step.action.type === type) {
+                    let match = true;
+                    // Loose matching: if target is not specified in step, it matches any target? No, usually target must match.
+                    if (step.action.target && step.action.target !== target) match = false;
+                    // Value check: if step requires value > X, we check provided value
+                    if (step.action.value !== undefined) {
+                        if (value === undefined || value < step.action.value) match = false;
+                    }
+
+                    if (match) {
+                        get().completeQuestStep(quest.id, step.id);
+                    }
+                }
+            });
+        });
+    },
 
     // ─── Sensor Actions ───
-    updateSensorData: (data) => set({ sensorData: data }),
-    setSensorConnection: (state) => set({ sensorConnection: state }),
+    updateSensorData: (data) => {
+        set({ sensorData: data });
+        // Check for quests: observation and care
+        get().triggerQuestAction('observation', 'moisture', data.soilMoisture);
+        get().triggerQuestAction('observation', 'light');        // For "Check light levels"
+        get().triggerQuestAction('observation', 'temperature');  // For "Check temperature"
+        get().triggerQuestAction('care', 'water', data.soilMoisture); // For "Water until > X"
+        get().triggerQuestAction('care', 'dry', data.soilMoisture);   // For "Let dry until < X"
+    },
+    setSensorConnection: (state) => {
+        set({ sensorConnection: state });
+        if (state === 'connected_real' || state === 'connected_simulated') {
+            get().triggerQuestAction('observation', 'connection');
+        }
+    },
 
     // ─── Shop & Garden Actions ───
     purchaseItem: (itemId) => {
@@ -199,7 +282,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
 
     // ─── UI Actions ───
-    setActivePanel: (panel) => set({ activePanel: panel }),
+    setActivePanel: (panel) => {
+        set({ activePanel: panel });
+        // Trigger generic navigation/interaction actions
+        get().triggerQuestAction('navigate', panel);
+        get().triggerQuestAction('interaction', panel);
+    },
     selectPlant: (id) => set({ selectedPlantId: id, activePanel: id ? 'plant_detail' : 'none' }),
     selectZombie: (id) => set({ selectedZombieId: id, activePanel: id ? 'zombie_info' : 'none' }),
     addChatMessage: (plantId, message) => set(s => ({

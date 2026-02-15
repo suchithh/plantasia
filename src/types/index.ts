@@ -10,6 +10,10 @@ export interface Personality {
     speakingStyle: string;
 }
 
+export type Mood = 'happy' | 'neutral' | 'worried' | 'excited' | 'dramatic' | 'sleepy';
+export type PlantReaction = 'bounce' | 'shake' | 'wiggle' | 'spin' | 'heart' | 'sad';
+
+
 // ─── Plant Characters ───
 
 export type PlantHealthStatus = 'healthy' | 'threatened' | 'in_battle' | 'damaged' | 'dead';
@@ -20,6 +24,8 @@ export interface PlantCharacter {
     commonName: string;
     nickname: string;
     personality: Personality;
+    mood: Mood;
+    activeReaction?: PlantReaction;
     avatarColor: string; // for procedural avatar
     healthStatus: PlantHealthStatus;
     position: { x: number; y: number; z: number }; // garden grid position
@@ -35,7 +41,7 @@ export interface PlantCharacter {
 // ─── Zombie Enemies ───
 
 export type ZombieType = 'drownface' | 'thirster' | 'sunscorch' | 'fungus_phil' | 'the_swarm' | 'neglecto';
-export type ZombieState = 'approaching' | 'arrived' | 'defeated';
+export type ZombieState = 'approaching' | 'spawn_animation' | 'fighting' | 'dying' | 'defeated';
 
 export interface ZombieLore {
     backstory: string;
@@ -57,6 +63,7 @@ export interface ZombieEnemy {
     targetPlantId: string;
     threatLevel: 1 | 2 | 3 | 4 | 5;
     lore: ZombieLore;
+    spawnPhrase?: string; // "A NEW CHALLENGER APPROACHING!"
     color: string;
     emoji: string;
     defeatSteps: string[];
@@ -68,9 +75,19 @@ export interface ZombieEnemy {
 
 export type QuestType = 'care' | 'battle' | 'daily' | 'photo' | 'touch';
 
+export type QuestActionType = 'navigate' | 'interaction' | 'observation' | 'care';
+
+export interface QuestAction {
+    type: QuestActionType;
+    target?: string;
+    value?: number;
+}
+
 export interface QuestStep {
     id: string;
     description: string;
+    subtitle?: string;
+    action?: QuestAction;
     completed: boolean;
 }
 
@@ -203,6 +220,8 @@ export interface DiagnosisResult {
 export type GameEvent =
     | { type: 'zombie_spawned'; zombieId: string; zombieType: ZombieType; targetPlantId: string }
     | { type: 'zombie_defeated'; zombieId: string }
+    | { type: 'plant_reaction'; plantId: string; reaction: PlantReaction }
+    | { type: 'challenger_approaching'; zombieId: string; zombieType: ZombieType } // For the Smash Bros overlay
     | { type: 'quest_completed'; questId: string; reward: QuestReward }
     | { type: 'plant_touched'; plantId: string; coins: number }
     | { type: 'shield_built'; plantId: string; strength: number }

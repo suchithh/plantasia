@@ -18,6 +18,9 @@ const statusColors: Record<string, string> = {
     dead: '#6B7280',
 };
 
+// ... existing imports ...
+import { useGameStore } from '../../stores/gameStore';
+
 // Create a canvas-based sprite texture for the name tag
 // Premium floating text — no bubble, just serif text with layered shadows
 function createNameTexture(name: string, _initial: string, statusColor: string): THREE.CanvasTexture {
@@ -104,6 +107,7 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
     const isThreatened = plant.healthStatus === 'threatened';
     const inBattle = plant.healthStatus === 'in_battle';
     const isHealthy = plant.healthStatus === 'healthy';
+    const activeReaction = plant.activeReaction;
 
     // Memoize the name tag texture
     const nameTexture = useMemo(() => {
@@ -123,10 +127,22 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
         } else if (inBattle) {
             const scale = 1 + Math.sin(t * 8) * 0.05;
             groupRef.current.scale.setScalar(scale);
+        } else if (activeReaction === 'bounce') {
+            groupRef.current.position.y = Math.abs(Math.sin(t * 10)) * 0.5;
+            groupRef.current.scale.setScalar(1 + Math.sin(t * 20) * 0.1);
+        } else if (activeReaction === 'shake') {
+            groupRef.current.rotation.z = Math.sin(t * 30) * 0.15;
+        } else if (activeReaction === 'spin') {
+            groupRef.current.rotation.y += 0.2;
+        } else if (activeReaction === 'wiggle') {
+            groupRef.current.rotation.z = Math.sin(t * 15) * 0.1;
+            groupRef.current.scale.x = 1 + Math.sin(t * 15) * 0.1;
         } else {
             const breathe = 1 + Math.sin(t * 2) * 0.02;
             groupRef.current.scale.set(breathe, breathe, breathe);
             groupRef.current.rotation.z = Math.sin(t * 1) * 0.015;
+            // Reset position if not bouncing
+            groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, 0.1);
         }
 
         if (leafRef.current && !isDead) {
@@ -145,7 +161,11 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
         <group
             ref={groupRef}
             position={[plant.position.x, 0, plant.position.z]}
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+                useGameStore.getState().triggerQuestAction('interaction', 'plant_tap');
+            }}
         >
             {/* Shadow on ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 0]}>
@@ -347,10 +367,10 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
                 </group>
             )}
 
-            {/* Happy particles when healthy */}
-            {isHealthy && plant.happiness > 70 && (
+            {/* Happy particles when healthy or reacting with heart */}
+            {(isHealthy && plant.happiness > 70) || activeReaction === 'heart' ? (
                 <HappyParticles position={[0, 0, 0]} />
-            )}
+            ) : null}
 
             {/* Dead halo - angel wings */}
             {isDead && (

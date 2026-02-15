@@ -7,6 +7,8 @@ import { PlantDetailPanel } from './components/plant/PlantDetailPanel';
 import { PlantChat } from './components/plant/PlantChat';
 import { ZombieInfoPanel } from './components/zombie/ZombieInfoPanel';
 import { QuestPanel } from './components/quest/QuestPanel';
+import { ZombieEncounter } from './components/zombie/ZombieEncounter';
+import { Toaster } from 'sonner';
 import { ScanView } from './components/scan/ScanView';
 import { SensorPairScreen } from './components/sensor/SensorPairScreen';
 import { DailyCheckIn } from './components/checkin/DailyCheckIn';
@@ -183,11 +185,11 @@ export function App() {
             {/* 3D Garden (fullscreen) */}
             <GardenScene />
 
-            {/* Sensor → Game Event Bridge */}
+            {/* Overlays */}
             <SensorOverlay />
-
-            {/* HUD Overlay */}
             <GardenHUD />
+            <ZombieEncounter />
+            <Toaster position="top-center" />
 
             {/* Bottom Dock — Unified Controls (Only visible when no panel is open) */}
             {activePanel === 'none' && <BottomDock />}

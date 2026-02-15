@@ -141,13 +141,15 @@ body,
   backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-2xl);
-  padding: 12px 32px;
+  padding: 10px 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   /* Spread out nicely */
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.6s var(--ease-spring);
+  transform: scale(0.75);
+  transform-origin: bottom center;
 }
 
 .dock-item {
@@ -422,6 +424,136 @@ body,
   }
 }
 
+/* ─── Priority Banner ─── */
+.hud-priority-banner {
+  position: absolute;
+  top: 80px;
+  /* Below title */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(239, 68, 68, 0.9);
+  padding: 8px 24px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  font-family: var(--font-heading);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  cursor: pointer;
+  z-index: 100;
+  animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.hud-priority-banner:hover {
+  transform: translateX(-50%) scale(1.05);
+}
+
+.banner-pulse {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px white;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translate(-50%, -40px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes ping {
+
+  75%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* ─── Dock Badges ─── */
+.dock-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #0f172a;
+  /* matches dock bg */
+  z-index: 10;
+}
+
+.dock-badge.notification {
+  background: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+  animation: badgePulse 2s infinite;
+}
+
+.dock-badge.success {
+  background: #22C55E;
+  box-shadow: 0 0 8px #22C55E;
+}
+
+.dock-badge.info {
+  background: #3B82F6;
+  box-shadow: 0 0 8px #3B82F6;
+}
+
+@keyframes badgePulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* ─── Quest Panel Overrides ─── */
+.quest-panel .panel-body {
+  padding: 24px;
+  background: #FDFBF7;
+}
+
+.quest-section {
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin-bottom: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.quest-section.emergency {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+
+.quest-section.daily {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════
    GAME CONTAINER
@@ -508,77 +640,139 @@ body,
 
 .hud-bottom-left {
   position: absolute;
-  bottom: 100px;
+  bottom: 30px;
   left: 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transform: scale(0.75);
+  transform-origin: bottom left;
 }
 
-/* ─── Title: floating serif text ─── */
-.hud-title {
+.hud-divider {
+  width: 40px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 2px 0;
+}
+
+/* ─── Logo: Glassmorphic Capsule ─── */
+.hud-logo-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  animation: fadeInDown 0.5s var(--ease-out) backwards;
+  gap: 12px;
+  padding: 8px 16px 8px 10px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 40px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: slideDownFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  transition: transform 0.2s;
 }
 
-.hud-title-icon {
-  color: #A7F3D0;
-  filter:
-    drop-shadow(0 1px 4px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 8px rgba(167, 243, 208, 0.3));
-  flex-shrink: 0;
+.hud-logo-container:hover {
+  transform: scale(1.02);
+  background: rgba(15, 23, 42, 0.75);
+}
+
+.hud-logo-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border-radius: 50%;
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.hud-logo-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 50%);
+  opacity: 0.8;
+}
+
+.hud-logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
 }
 
 .hud-game-name {
-  font-family: var(--font-title);
-  font-size: 1.75rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
   font-weight: 800;
-  color: var(--hud-text);
-  text-shadow:
-    var(--hud-shadow),
-    0 0 24px rgba(167, 243, 208, 0.2);
-  letter-spacing: -0.5px;
+  color: white;
+  letter-spacing: 0.02em;
   line-height: 1;
-  margin: 0;
-  padding: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .hud-game-sub {
-  font-family: var(--font-title);
-  font-size: 0.68rem;
-  font-weight: 600;
-  font-style: italic;
-  color: #A7F3D0;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  letter-spacing: 3.5px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #6EE7B7;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  display: block;
-  margin-top: 2px;
-  opacity: 0.75;
+  line-height: 1;
+  opacity: 0.9;
 }
 
 /* ─── Coins: floating text ─── */
 .hud-coins {
   display: flex;
   align-items: center;
-  gap: 6px;
-  animation: fadeInDown 0.5s var(--ease-out) 0.04s backwards;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  margin-left: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: slideDownFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s backwards;
 }
 
 .hud-coin-icon {
   color: #FBBF24;
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 6px rgba(251, 191, 36, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(251, 191, 36, 0.4));
 }
 
 .hud-coin-value {
-  font-family: var(--font-title);
-  font-size: 1.25rem;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
   font-weight: 700;
   color: #FEF3C7;
-  text-shadow:
-    var(--hud-shadow),
-    0 0 12px rgba(251, 191, 36, 0.25);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.02em;
+}
+
+@keyframes slideDownFade {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 /* ─── Quest: gauge ring + floating label ─── */
@@ -697,7 +891,7 @@ body,
 
 .hud-action-hint {
   font-family: var(--font-heading);
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.65);
   text-shadow:
@@ -945,8 +1139,8 @@ body,
 ═══════════════════════════════════════════════════════════════ */
 .demo-controls {
   position: absolute;
-  bottom: 32px;
-  left: 32px;
+  bottom: 140px;
+  right: 20px;
   z-index: 10;
 }
 
@@ -976,7 +1170,7 @@ body,
 .demo-panel {
   position: absolute;
   bottom: 56px;
-  left: 0;
+  right: 0;
   width: 200px;
   padding: 16px;
   background: var(--panel-bg);
@@ -1090,6 +1284,36 @@ body,
   overflow-y: auto;
   animation: panelSlideUp 0.4s var(--ease-spring);
   box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Quest panel — themed dark background */
+.panel.quest-panel {
+  background: linear-gradient(175deg, #1a2a1a 0%, #0f1f14 40%, #162016 100%);
+  box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(74, 222, 128, 0.1);
+}
+
+.panel.quest-panel .panel-header {
+  background: #1a2a1a;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.1);
+  z-index: 10;
+}
+
+.panel.quest-panel .panel-header h2 {
+  color: #E8F5E9;
+}
+
+.panel.quest-panel .panel-header h2 svg {
+  color: #4ADE80;
+}
+
+.panel.quest-panel .panel-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.panel.quest-panel .panel-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
 }
 
 .panel-header {
@@ -1539,32 +1763,33 @@ body,
 
 
 /* ═══════════════════════════════════════════════════════════════
-   QUEST PANEL
+   QUEST PANEL — Timeline Design
 ═══════════════════════════════════════════════════════════════ */
 .quest-card {
-  padding: 18px;
+  padding: 20px 22px;
+  margin-bottom: 8px;
   border-radius: var(--radius-md);
-  background: rgba(0, 0, 0, 0.015);
-  box-shadow: none;
-  margin-bottom: 12px;
-  border-left: 3px solid var(--button);
-  transition: background 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(74, 222, 128, 0.06);
   animation: staggerIn 0.35s var(--ease-out) backwards;
+  transition: background 0.25s, border-color 0.25s;
 }
 
 .quest-card:hover {
-  background: rgba(0, 0, 0, 0.03);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .quest-card.active {
-  border-left-color: var(--button-success);
-  background: rgba(52, 199, 89, 0.04);
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(74, 222, 128, 0.04) 100%);
+  border-color: rgba(74, 222, 128, 0.15);
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.05);
 }
 
 .quest-card.completed {
-  opacity: 0.55;
-  border-left-color: var(--text-muted);
+  opacity: 0.45;
+  padding: 14px 22px;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.04);
 }
 
 .quest-card:nth-child(1) {
@@ -1583,59 +1808,286 @@ body,
   animation-delay: 0.12s;
 }
 
-.quest-title {
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: 1.18rem;
-  margin-bottom: 5px;
-}
-
-.quest-desc {
-  font-size: 1.05rem;
-  color: var(--text-secondary);
-  margin-bottom: 14px;
-  line-height: 1.55;
-}
-
-.quest-reward {
+/* Header row — type badge + progress counter */
+.quest-header-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-.quest-reward svg {
-  color: var(--coins);
+.quest-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4ADE80;
+  opacity: 0.9;
+}
+
+.quest-type-badge.battle {
+  color: #F87171;
+}
+
+.quest-type-badge.daily {
+  color: #FBBF24;
+}
+
+.quest-type-badge svg {
   flex-shrink: 0;
 }
 
-.quest-step {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 1.02rem;
-  padding: 6px 0;
+.quest-progress-pill {
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--button-success);
+  background: rgba(52, 199, 89, 0.1);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.04em;
 }
 
-.quest-step-check {
+.quest-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+  color: #F0FFF4;
+}
+
+.quest-desc {
+  font-size: 0.98rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ─── Timeline Steps ─── */
+.quest-timeline {
+  margin-bottom: 14px;
+  padding-left: 2px;
+}
+
+.quest-timeline-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 36px;
+  transition: opacity 0.2s;
+}
+
+.quest-timeline-step:hover:not(.done) {
+  opacity: 0.75;
+}
+
+.quest-timeline-step.current .quest-timeline-text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.quest-timeline-track {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
   width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  border: 2px solid rgba(0, 0, 0, 0.12);
+  padding-top: 2px;
+}
+
+.quest-timeline-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: all 0.2s var(--ease-out);
+  transition: all 0.25s var(--ease-spring);
 }
 
-.quest-step-check.done {
+.quest-timeline-dot.done {
   background: var(--button-success);
   border-color: var(--button-success);
   color: white;
-  font-size: 0.7rem;
+  box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
+}
+
+.quest-timeline-step.current .quest-timeline-dot {
+  border-color: #4ADE80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+}
+
+.quest-timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 2px 0;
+  transition: background 0.3s;
+}
+
+.quest-timeline-line.done {
+  background: var(--button-success);
+}
+
+.quest-timeline-text {
+  font-size: 0.98rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+  padding-top: 1px;
+  padding-bottom: 8px;
+}
+
+.quest-timeline-text.completed {
+  text-decoration: line-through;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* ─── Progress Bar ─── */
+.quest-progress-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.quest-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--button-success) 0%, #A7F3D0 100%);
+  border-radius: 2px;
+  transition: width 0.5s var(--ease-out);
+}
+
+/* ─── Reward Chips ─── */
+.quest-reward-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.quest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+}
+
+.quest-chip.coins {
+  background: rgba(251, 191, 36, 0.15);
+  color: #FBBF24;
+}
+
+.quest-chip.coins svg {
+  color: #F59E0B;
+}
+
+.quest-chip.xp {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93C5FD;
+}
+
+.quest-chip.xp svg {
+  color: #60A5FA;
+}
+
+.quest-chip.trophy {
+  background: rgba(168, 85, 247, 0.15);
+  color: #C4B5FD;
+}
+
+.quest-chip.trophy svg {
+  color: #A78BFA;
+}
+
+/* ─── Educational Callout ─── */
+.quest-edu {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.5;
+  padding-top: 4px;
+}
+
+.quest-edu svg {
+  color: #FBBF24;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.quest-edu p {
+  margin: 0;
+}
+
+/* ─── Activate Button ─── */
+.quest-activate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1.5px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius-md);
+  background: none;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.quest-activate-btn:hover {
+  background: var(--button-success);
+  color: white;
+  border-color: var(--button-success);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.25);
+}
+
+.quest-activate-btn svg {
+  transition: transform 0.2s;
+}
+
+.quest-activate-btn:hover svg {
+  transform: translateX(2px);
+}
+
+/* ─── Dark theme overrides for quest panel shared classes ─── */
+.panel.quest-panel .empty-state,
+.panel.quest-panel .empty-state-icon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.panel.quest-panel .empty-state-title {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.panel.quest-panel .completed-header {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.panel.quest-panel .quest-progress-pill {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ADE80;
 }
 
 
@@ -2246,7 +2698,7 @@ body,
   }
 
   .hud-bottom-left {
-    bottom: 76px;
+    bottom: 110px;
     left: 12px;
   }
 
@@ -2275,8 +2727,8 @@ body,
   }
 
   .demo-controls {
-    bottom: 20px;
-    left: 20px;
+    bottom: 110px;
+    right: 12px;
   }
 
   .panel {

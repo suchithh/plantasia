@@ -2,7 +2,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../../stores/gameStore';
 import { chatWithPlant } from '../../services/gemini';
-import { Leaf, SendHorizontal, X } from 'lucide-react';
+import { Leaf, SendHorizontal, X, MessageCircleQuestion, Sparkles } from 'lucide-react';
+
+const personalityColors: Record<string, string> = {
+    dramatic: '#F472B6', // Pink
+    chill: '#4ADE80',    // Green
+    anxious: '#A78BFA',  // Purple
+    wise: '#60A5FA',     // Blue
+    cheerful: '#FBBF24', // Yellow
+};
+
+const moodEmojis: Record<string, string> = {
+    happy: '😊',
+    neutral: '😐',
+    worried: '😰',
+    excited: '🤩',
+    dramatic: '🎭',
+    sleepy: '😴',
+};
 
 export function PlantChat() {
     const selectedPlantId = useGameStore(s => s.selectedPlantId);
@@ -17,6 +34,7 @@ export function PlantChat() {
     const setChatLoading = useGameStore(s => s.setChatLoading);
     const setActivePanel = useGameStore(s => s.setActivePanel);
     const selectPlant = useGameStore(s => s.selectPlant);
+    const triggerReaction = useGameStore(s => s.triggerPlantReaction);
 
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -45,6 +63,7 @@ export function PlantChat() {
         addChatMessage(plant.id, userMsg);
         setInput('');
         setChatLoading(true);
+        triggerReaction(plant.id, 'bounce'); // React to user input immediately
 
         try {
             const response = await chatWithPlant(plant, userMsg.text, messages, {
@@ -74,23 +93,43 @@ export function PlantChat() {
 
     const handleClose = () => { selectPlant(null); setActivePanel('none'); };
 
-    // Quick reply suggestions
-    const quickReplies = [
-        'How are you feeling?',
-        'Any zombies nearby?',
-        'Tell me a plant fact!',
-        'Do you need water?',
-    ];
+    // Context-aware Quick Replies
+    const getQuickReplies = () => {
+        const replies = [];
+        const hasZombies = zombies.some(z => z.state !== 'defeated' && z.state !== 'dying');
+        const needsWater = plant.healthStatus === 'threatened' || plant.happiness < 50;
+
+        if (hasZombies) {
+            replies.push("Are you safe?", "I'll protect you!", "How close is it?");
+        } else if (needsWater) {
+            replies.push("Do you need water?", "You look thirsty.", "Hang in there.");
+        } else {
+            // Personality based
+            if (plant.personality.type === 'dramatic') replies.push("Tell me some gossip!", "Why so quiet?", "Am I fabulous?");
+            if (plant.personality.type === 'chill') replies.push("Vibe check.", "Relaxing today?", "Needs sun?");
+            if (plant.personality.type === 'anxious') replies.push("Is everything okay?", "Did you hear that?", "You're safe.");
+            replies.push("You look great!", "Tell me a fact.");
+        }
+        return replies.slice(0, 4);
+    };
+
+    const activeQuickReplies = getQuickReplies();
+    const themeColor = personalityColors[plant.personality.type] || '#4ADE80';
 
     return (
         <div className="panel-overlay" onClick={handleClose}>
-            <div className="panel" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh' }}>
-                <div className="panel-header">
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="chat-avatar"
-                            style={{ background: `${plant.avatarColor}22` }}
-                        ><Leaf size={15} /></span>
-                        Chat with {plant.nickname}
+            <div className="panel" onClick={e => e.stopPropagation()} style={{ maxHeight: '75vh', borderColor: themeColor, borderWidth: '2px', borderStyle: 'solid' }}>
+                <div className="panel-header" style={{ borderBottomColor: `${themeColor}44` }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: themeColor }}>
+                        <div className="chat-avatar-container" style={{ position: 'relative' }}>
+                            <span className="chat-avatar"
+                                style={{ background: `${themeColor}22`, color: themeColor }}
+                            ><Leaf size={15} /></span>
+                            <span style={{ position: 'absolute', bottom: -2, right: -2, fontSize: '12px' }}>
+                                {moodEmojis[plant.mood || 'neutral'] || '😐'}
+                            </span>
+                        </div>
+                        {plant.nickname}
                     </h2>
                     <button className="panel-close" onClick={handleClose}><X size={16} /></button>
                 </div>
@@ -122,16 +161,15 @@ export function PlantChat() {
                     </div>
 
                     {/* Quick Replies */}
-                    {messages.length === 0 && (
-                        <div className="quick-reply-container">
-                            {quickReplies.map((text, i) => (
-                                <button key={i} onClick={() => { setInput(text); }}
-                                    className="quick-reply">
-                                    {text}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    <div className="quick-reply-container">
+                        {activeQuickReplies.map((text, i) => (
+                            <button key={i} onClick={() => { setInput(text); }}
+                                className="quick-reply"
+                                style={{ borderColor: `${themeColor}66`, color: themeColor }}>
+                                {text}
+                            </button>
+                        ))}
+                    </div>
 
                     <div className="chat-input-row">
                         <input
