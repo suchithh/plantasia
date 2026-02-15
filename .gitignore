@@ -33,3 +33,5 @@ tsc_output.txt
 
 # Claude
 .claude/
+
+demo.md

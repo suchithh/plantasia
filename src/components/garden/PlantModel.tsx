@@ -100,15 +100,7 @@ function createNameTexture(name: string, _initial: string, statusColor: string):
     ctx.fillStyle = '#FFFFFF';
     ctx.fillText(name, 256, 50);
 
-    // Elegant underline
-    const textWidth = ctx.measureText(name).width;
-    ctx.fillStyle = statusColor;
-    ctx.globalAlpha = 0.8;
-    ctx.shadowColor = statusColor;
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.roundRect(256 - textWidth / 2 - 10, 85, textWidth + 20, 6, 3);
-    ctx.fill();
+    // (Underline removed for cleaner look)
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
@@ -162,26 +154,74 @@ function HappyParticles({ position }: { position: [number, number, number] }) {
     );
 }
 
+// New Sweat Droplets for Nervous Animation
+function SweatParticles({ position }: { position: [number, number, number] }) {
+    const groupRef = useRef<THREE.Group>(null);
+    useFrame(({ clock }) => {
+        if (!groupRef.current) return;
+        const t = clock.getElapsedTime();
+        groupRef.current.children.forEach((child, i) => {
+            const loop = (t + i * 0.3) % 1.0; // Fast and varied
+            child.position.y = 1.0 - loop * 0.7; // Fall down
+            child.scale.setScalar(Math.sin(loop * Math.PI) * 0.6); // Plump drops 
+            if (loop > 1.0) child.visible = false;
+            else child.visible = true;
+        });
+    });
+
+    return (
+        <group ref={groupRef} position={position}>
+            {/* INTENSE SWEATING */}
+            <mesh position={[-0.35, 0, 0.15]}>
+                <sphereGeometry args={[0.07, 8, 8]} />
+                <meshStandardMaterial color="#60A5FA" transparent opacity={0.9} roughness={0.1} />
+            </mesh>
+            <mesh position={[0.35, 0, 0.15]}>
+                <sphereGeometry args={[0.06, 8, 8]} />
+                <meshStandardMaterial color="#60A5FA" transparent opacity={0.9} roughness={0.1} />
+            </mesh>
+            <mesh position={[-0.15, 0.2, 0.25]}>
+                <sphereGeometry args={[0.05, 8, 8]} />
+                <meshStandardMaterial color="#60A5FA" transparent opacity={0.9} roughness={0.1} />
+            </mesh>
+            <mesh position={[0.15, 0.3, 0.25]}>
+                <sphereGeometry args={[0.055, 8, 8]} />
+                <meshStandardMaterial color="#60A5FA" transparent opacity={0.9} roughness={0.1} />
+            </mesh>
+            <mesh position={[0, 0.1, 0.3]}>
+                <sphereGeometry args={[0.04, 8, 8]} />
+                <meshStandardMaterial color="#60A5FA" transparent opacity={0.9} roughness={0.1} />
+            </mesh>
+        </group>
+    );
+}
+
 export function PlantModel({ plant, onClick }: PlantModelProps) {
     const groupRef = useRef<THREE.Group>(null);
     const headRef = useRef<THREE.Group>(null);
     const leavesRef = useRef<THREE.Group>(null);
 
+    // Pupils for darting animation
+    const leftPupilRef = useRef<THREE.Mesh>(null);
+    const rightPupilRef = useRef<THREE.Mesh>(null);
+
     // Animation Refs for dampening
     const currentScale = useRef(1);
     const currentRotZ = useRef(0);
+    const currentRotX = useRef(0);
     const currentPosY = useRef(0);
 
     const color = statusColors[plant.healthStatus] || plant.avatarColor;
     const isDead = plant.healthStatus === 'dead';
-    const isThreatened = plant.healthStatus === 'threatened';
+    const isThreatened = plant.healthStatus === 'threatened' || plant.activeReaction === 'shake';
     const inBattle = plant.healthStatus === 'in_battle';
     const isHealthy = plant.healthStatus === 'healthy';
 
     // Geometry Memos
     const potGeometry = useMemo(() => createPotGeometry(), []);
     const leafGeometry = useMemo(() => new THREE.ExtrudeGeometry(createLeafShape(), { depth: 0.02, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 }), []);
-    const stemCurve = useMemo(() => createStemCurve(0.8, -0.2), []); // Slight natural bend
+    // Revert visual to natural bend (User request)
+    const stemCurve = useMemo(() => createStemCurve(0.8, -0.2), []);
     const stemGeometry = useMemo(() => new THREE.TubeGeometry(stemCurve, 20, 0.04, 8, false), [stemCurve]);
 
     const nameTexture = useMemo(() => {
@@ -195,16 +235,31 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
         const t = state.clock.getElapsedTime();
         let targetScale = 1;
         let targetRotZ = 0;
+        let targetRotX = 0;
         let targetPosY = 0;
 
         // --- State Dependent Targets ---
         if (isDead) {
             targetRotZ = 0.3; // Slumped
+            targetRotX = 0.5; // Bowed down
         } else if (plant.activeReaction === 'bounce') {
             targetPosY = Math.abs(Math.sin(t * 12)) * 0.4;
             targetScale = 1 + Math.sin(t * 20) * 0.15;
-        } else if (plant.activeReaction === 'shake' || isThreatened) {
-            targetRotZ = Math.sin(t * 25) * 0.15;
+            targetRotX = Math.sin(t * 20) * 0.05;
+        } else if (isThreatened) {
+            // "Cowering" State (Replaces unnatural shaking)
+            // 1. Shrink down (cower)
+            targetScale = 0.9 + Math.sin(t * 20) * 0.01; // Hyperventilating scale (very fast, very subtle)
+
+            // 2. Hunch over - REMOVED LEAN (User request)
+            targetRotX = 0;
+
+            // 3. Subtle tremble (no large swaying)
+            const subtleTremble = (Math.random() - 0.5) * 0.03;
+            targetRotZ = subtleTremble;
+
+            // 4. Darting Eyes (handled in secondary animations below)
+
         } else if (plant.activeReaction === 'wiggle') {
             targetRotZ = Math.sin(t * 8) * 0.1;
         } else if (inBattle) {
@@ -217,20 +272,39 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
 
         // --- Smooth Damping ---
         currentScale.current = damp(currentScale.current, targetScale, 8, delta);
-        currentRotZ.current = damp(currentRotZ.current, targetRotZ, 8, delta);
-        currentPosY.current = damp(currentPosY.current, targetPosY, 10, delta); // Snappier Y for bounce
+        currentRotZ.current = damp(currentRotZ.current, targetRotZ, isThreatened ? 20 : 8, delta);
+        currentRotX.current = damp(currentRotX.current, targetRotX, 8, delta);
+        currentPosY.current = damp(currentPosY.current, targetPosY, 10, delta);
 
         // Apply transformations
         groupRef.current.scale.setScalar(currentScale.current);
         groupRef.current.rotation.z = currentRotZ.current;
+        groupRef.current.rotation.x = currentRotX.current;
         groupRef.current.position.y = currentPosY.current;
 
 
         // Secondary animations
         if (headRef.current && !isDead) {
             // Head tracks mouse slightly or just bobs
-            headRef.current.rotation.y = Math.sin(t * 0.5) * 0.1;
-            headRef.current.rotation.x = Math.sin(t * 0.7) * 0.05;
+            if (isThreatened) {
+                // Nervous looking around
+                headRef.current.rotation.y = Math.sin(t * 10) * 0.05; // Shaking head slightly
+            } else {
+                headRef.current.rotation.y = Math.sin(t * 0.5) * 0.1;
+                headRef.current.rotation.x = Math.sin(t * 0.7) * 0.05;
+            }
+        }
+
+        // Darting Eyes Logic
+        if (leftPupilRef.current && rightPupilRef.current && isThreatened) {
+            // Randomly dart eyes every second or so
+            const dartX = (Math.sin(t * 8) > 0.5 ? 0.04 : -0.04) + (Math.random() * 0.02);
+            leftPupilRef.current.position.x = damp(leftPupilRef.current.position.x, dartX, 25, delta);
+            rightPupilRef.current.position.x = damp(rightPupilRef.current.position.x, dartX, 25, delta);
+        } else if (leftPupilRef.current && rightPupilRef.current) {
+            // Reset eyes
+            leftPupilRef.current.position.x = damp(leftPupilRef.current.position.x, 0, 5, delta);
+            rightPupilRef.current.position.x = damp(rightPupilRef.current.position.x, 0, 5, delta);
         }
 
         if (leavesRef.current && !isDead) {
@@ -241,7 +315,7 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
     return (
         <group
             ref={groupRef}
-            position={[plant.position.x, 0, plant.position.z]}
+            position={[plant.position.x + 0.2, 0, plant.position.z + 0.3]} // Stronger isometric centering offset
             onClick={(e) => {
                 e.stopPropagation();
                 onClick();
@@ -325,23 +399,33 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
                                     <sphereGeometry args={[0.015, 8, 8]} />
                                     <meshBasicMaterial color="#FFFFFF" />
                                 </mesh>
+                                {/* Pupils (hidden unless threatened usually, but adding for all to allow tracking) */}
+                                <mesh ref={leftPupilRef} position={[-0.12, 0, 0.04]} visible={isThreatened}>
+                                    <sphereGeometry args={[0.015, 8, 8]} />
+                                    <meshBasicMaterial color="#000000" />
+                                </mesh>
+                                <mesh ref={rightPupilRef} position={[0.12, 0, 0.04]} visible={isThreatened}>
+                                    <sphereGeometry args={[0.015, 8, 8]} />
+                                    <meshBasicMaterial color="#000000" />
+                                </mesh>
                             </group>
 
                             {/* Mouth */}
                             <group position={[0, -0.1, 0]}>
-                                {isHealthy && (
+                                {isHealthy && !isThreatened && (
                                     <mesh rotation={[0, 0, 0]}>
                                         <torusGeometry args={[0.06, 0.015, 8, 16, Math.PI]} />
                                         <meshStandardMaterial color="#212121" />
                                     </mesh>
                                 )}
                                 {isThreatened && (
+                                    // Scared mouth: Small 'O' shape or wavy line? Small O.
                                     <mesh>
-                                        <ringGeometry args={[0.03, 0.05, 16]} />
+                                        <ringGeometry args={[0.02, 0.04, 16]} />
                                         <meshStandardMaterial color="#212121" />
                                     </mesh>
                                 )}
-                                {inBattle && (
+                                {inBattle && !isThreatened && (
                                     <mesh position={[0, 0.02, 0]} rotation={[0, 0, 0]}>
                                         <boxGeometry args={[0.12, 0.02, 0.01]} />
                                         <meshStandardMaterial color="#212121" />
@@ -350,7 +434,7 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
                             </group>
 
                             {/* Blush */}
-                            {isHealthy && plant.happiness > 50 && (
+                            {isHealthy && plant.happiness > 50 && !isThreatened && (
                                 <>
                                     <mesh position={[-0.18, -0.05, -0.02]}>
                                         <circleGeometry args={[0.05, 16]} />
@@ -408,8 +492,13 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
             </group>
 
             {/* Emotions / Particles */}
-            {(isHealthy && plant.happiness > 80) || plant.activeReaction === 'heart' ? (
+            {(isHealthy && plant.happiness > 80 && !isThreatened) || plant.activeReaction === 'heart' ? (
                 <HappyParticles position={[0, 1.2, 0]} />
+            ) : null}
+
+            {/* Sweat effect when threatened or shaking */}
+            {isThreatened ? (
+                <SweatParticles position={[0, 1.0, 0]} />
             ) : null}
 
             {/* Name Tag */}
