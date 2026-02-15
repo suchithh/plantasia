@@ -116,7 +116,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     gameEvents: [],
 
     // ─── Plant Actions ───
-    addPlant: (plant) => set(s => ({ plants: [...s.plants, { ...plant, mood: 'neutral' }] })),
+    addPlant: (plant) => set(s => ({
+        plants: [...s.plants, plant],
+        selectedCheckInPlantId: plant.id, // Auto-select new plant for check-in
+    })),
     updatePlantMood: (id, mood) => set(s => ({
         plants: s.plants.map(p => p.id === id ? { ...p, mood } : p)
     })),
@@ -141,7 +144,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // ─── Zombie Actions ───
     spawnZombie: (zombie) => {
-        set(s => ({ zombies: [...s.zombies, { ...zombie, state: 'spawn_animation' }] }));
+        set(s => ({
+            zombies: [...s.zombies, { ...zombie, state: 'spawn_animation' }],
+            // Update target plant health to in_battle
+            plants: s.plants.map(p =>
+                p.id === zombie.targetPlantId
+                    ? { ...p, healthStatus: 'in_battle' as const, mood: 'worried' as const, happiness: Math.min(p.happiness, 45) }
+                    : p
+            ),
+        }));
         // Trigger the Smash Bros event
         get().pushGameEvent({ type: 'challenger_approaching', zombieId: zombie.id, zombieType: zombie.type });
 
@@ -155,9 +166,24 @@ export const useGameStore = create<GameState>((set, get) => ({
     updateZombieProgress: (id, progress) => set(s => ({
         zombies: s.zombies.map(z => z.id === id ? { ...z, progress: Math.min(1, progress) } : z),
     })),
-    defeatZombie: (id) => set(s => ({
-        zombies: s.zombies.map(z => z.id === id ? { ...z, state: 'defeated' as const } : z),
-    })),
+    defeatZombie: (id) => {
+        const zombie = get().zombies.find(z => z.id === id);
+        set(s => ({
+            zombies: s.zombies.map(z => z.id === id ? { ...z, state: 'defeated' as const } : z),
+            // Restore target plant health
+            plants: zombie ? s.plants.map(p =>
+                p.id === zombie.targetPlantId
+                    ? { ...p, healthStatus: 'healthy' as const, mood: 'happy' as const, happiness: Math.max(p.happiness, 80) }
+                    : p
+            ) : s.plants,
+        }));
+        // Trigger celebration on the plant
+        if (zombie) {
+            get().triggerPlantReaction(zombie.targetPlantId, 'heart');
+        }
+        // Push zombie_defeated event LAST so it's picked up by ZombieEncounter
+        get().pushGameEvent({ type: 'zombie_defeated', zombieId: id });
+    },
 
     // ─── Quest Actions ───
     activateQuest: (id) => set(s => ({
@@ -195,6 +221,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         }));
         if (quest.reward.trophy) {
             get().addTrophy(quest.reward.trophy);
+        }
+        get().pushGameEvent({ type: 'quest_completed', questId: id, reward: quest.reward });
+        // Auto-defeat linked zombie when battle quest completes
+        if (quest.type === 'battle' && quest.zombieId) {
+            const zombie = get().zombies.find(z => z.id === quest.zombieId && z.state !== 'defeated');
+            if (zombie) {
+                setTimeout(() => get().defeatZombie(zombie.id), 800);
+            }
         }
     },
     addQuest: (quest) => set(s => ({ quests: [...s.quests, quest] })),

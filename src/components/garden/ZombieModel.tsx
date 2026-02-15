@@ -160,8 +160,8 @@ export function ZombieModel({ zombie, onClick }: ZombieModelProps) {
 
             if (dist > 1.8) {
                 // Classic shuffle: move forward
-                groupRef.current.position.x += dx * 0.0006;
-                groupRef.current.position.z += dz * 0.0006;
+                groupRef.current.position.x += dx * 0.00015;
+                groupRef.current.position.z += dz * 0.00015;
                 const targetAngle = Math.atan2(dx, dz);
                 groupRef.current.rotation.y = damp(groupRef.current.rotation.y, targetAngle, 3, delta);
             }

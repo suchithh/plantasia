@@ -65,6 +65,21 @@ export function PlantChat() {
         setChatLoading(true);
         triggerReaction(plant.id, 'bounce'); // React to user input immediately
 
+        // DEMO OVERRIDE for Princess Finn
+        if (plant.nickname === 'Princess Finn') {
+            setTimeout(() => {
+                const demoResponse = "I am PARCHED. This is a CRISIS. I need water IMMEDIATELY to save me from Thirster!";
+                addChatMessage(plant.id, {
+                    id: `msg_${Date.now()}_plant`,
+                    sender: 'plant',
+                    text: demoResponse,
+                    timestamp: Date.now(),
+                });
+                setChatLoading(false);
+            }, 1500); // Slight delay for realism
+            return;
+        }
+
         try {
             const response = await chatWithPlant(plant, userMsg.text, messages, {
                 activeZombies: zombies.filter(z => z.state !== 'defeated').map(z => z.name),

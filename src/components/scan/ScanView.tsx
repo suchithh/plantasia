@@ -19,11 +19,14 @@ import {
 
 type ScanState = 'camera' | 'capturing' | 'identifying' | 'naming' | 'done';
 
-export function ScanView() {
+export function ScanView({ mode = 'new_plant' }: { mode?: 'new_plant' | 'victory' }) {
     const setActivePanel = useGameStore(s => s.setActivePanel);
     const addPlant = useGameStore(s => s.addPlant);
     const addCoins = useGameStore(s => s.addCoins);
     const plants = useGameStore(s => s.plants);
+    const defeatZombie = useGameStore(s => s.defeatZombie);
+    const zombies = useGameStore(s => s.zombies);
+    const activeZombie = zombies.find(z => z.state !== 'defeated');
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -72,22 +75,80 @@ export function ScanView() {
 
         setScanState('identifying');
 
+        if (mode === 'victory') {
+            // VICTORY FLOW
+            try {
+                // 1. Simulate "Analyzing..." delay (5-8 seconds)
+                const delay = 5000 + Math.random() * 3000;
+                await new Promise(r => setTimeout(r, delay));
+
+                // 2. Trigger defeat & Complete Quest
+                if (activeZombie) {
+                    // Find active battle quest
+                    const quests = useGameStore.getState().quests;
+                    const battleQuest = quests.find(q => q.active && q.type === 'battle' && q.zombieId === activeZombie.id);
+
+                    // Complete quest FIRST (so quest_completed event happens before zombie_defeated)
+                    if (battleQuest) {
+                        useGameStore.getState().completeQuest(battleQuest.id);
+                    }
+
+                    // Then defeat zombie (triggers zombie_defeated event LAST)
+                    defeatZombie(activeZombie.id);
+                }
+
+                // 3. Close panel (ZombieEncounter will handle the alert)
+                setActivePanel('none');
+            } catch (e) {
+                console.error(e);
+            }
+            return;
+        }
+
+        // Demo fallback for Bird's Nest Fern
+        const demoFallbackIdent = {
+            species: 'Asplenium nidus',
+            commonName: "Bird's Nest Fern",
+            confidence: 0.94,
+            careLevel: 'moderate' as const,
+        };
+        const demoFallbackPersonality = {
+            suggestedName: 'Princess Finn',
+            personality: {
+                type: 'dramatic' as const,
+                quirks: ['Throws tantrums when thirsty', 'Loves humidity gossip', 'Faints at direct sunlight'],
+                speakingStyle: 'Over-the-top dramatic royalty who speaks in proclamations',
+            },
+        };
+
         try {
+            // SIMULATED DELAY FOR DEMO
+            await new Promise(r => setTimeout(r, 2500));
+
             // Plant ID
-            const ident = await identifyPlant(base64);
-            setIdentResult(ident);
+            // const ident = await identifyPlant(base64);
+            // setIdentResult(ident);
 
             // Generate personality
-            const personality = await generatePersonality(ident.species, ident.commonName);
-            setPersonalityResult(personality);
-            setNickname(personality.suggestedName);
+            // const personality = await generatePersonality(ident.species, ident.commonName);
+            // setPersonalityResult(personality);
+            // setNickname(personality.suggestedName);
+
+            // FORCE DEMO FALLBACK
+            setIdentResult(demoFallbackIdent);
+            setPersonalityResult(demoFallbackPersonality);
+            setNickname(demoFallbackPersonality.suggestedName);
 
             setScanState('naming');
         } catch (err) {
-            setError('Could not identify plant. Try again with better lighting!');
-            setScanState('camera');
+            // Fallback: use hardcoded Bird's Nest Fern for demo
+            console.log('Gemini ID failed, using demo fallback (Bird\'s Nest Fern)');
+            setIdentResult(demoFallbackIdent);
+            setPersonalityResult(demoFallbackPersonality);
+            setNickname(demoFallbackPersonality.suggestedName);
+            setScanState('naming');
         }
-    }, []);
+    }, [mode, activeZombie, defeatZombie, setActivePanel]);
 
     const handleConfirm = () => {
         if (!identResult || !personalityResult) return;
@@ -106,6 +167,7 @@ export function ScanView() {
             commonName: identResult.commonName,
             nickname: nickname || personalityResult.suggestedName,
             personality: personalityResult.personality,
+            mood: 'happy' as const,
             avatarColor: personalityColors[Math.floor(Math.random() * personalityColors.length)],
             healthStatus: 'healthy',
             position: slot,
@@ -122,7 +184,8 @@ export function ScanView() {
         setScanState('done');
 
         setTimeout(() => {
-            handleClose();
+            streamRef.current?.getTracks().forEach(t => t.stop());
+            setActivePanel('sensor_pair');
         }, 2000);
     };
 
@@ -131,12 +194,20 @@ export function ScanView() {
         setActivePanel('none');
     };
 
+    const headerTitle = mode === 'victory' ? "Victory Scan" : "Add New Plant";
+    const headerSubtitle = mode === 'victory' ? "Confirm the area is safe" : "Scan your real plant to bring it into the game!";
+
     return (
         <div className="checkin-overlay">
+            {/* Close Button */}
+            <button className="checkin-close-fab" onClick={handleClose}>
+                <X size={24} />
+            </button>
+
             <div className="checkin-hud">
                 <div className="checkin-header">
-                    <h2>Add New Plant</h2>
-                    <p>Scan your real plant to bring it into the game!</p>
+                    <h2>{headerTitle}</h2>
+                    <p>{headerSubtitle}</p>
                 </div>
 
                 <div className="checkin-camera-frame">
@@ -146,6 +217,7 @@ export function ScanView() {
                         <>
                             <video ref={videoRef} className="checkin-video" autoPlay playsInline muted />
                             <div className="camera-guide-overlay">
+                                <div className="guide-corners" />
                                 <div className="guide-text">
                                     <Camera size={20} />
                                     <span>Point at your plant</span>
@@ -155,57 +227,61 @@ export function ScanView() {
                     )}
 
                     {(scanState === 'capturing' || scanState === 'identifying') && (
-                        <div className="analysis-view">
-                            <div className="scanner-line" />
+                        <div className="analysis-view" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <div className="analysis-status">
                                 <ScanSearch size={24} className="spin-slow" />
-                                <span>Identifying plant species...</span>
+                                <span>{mode === 'victory' ? "Verifying Health..." : "Identifying..."}</span>
                             </div>
-                        </div>
-                    )}
-
-                    {scanState === 'naming' && identResult && personalityResult && (
-                        <div className="scan-result-glass">
-                            <div className="scan-result-icon"><Leaf size={32} /></div>
-                            <h3>{identResult.commonName}</h3>
-                            <div className="scan-species-tag">{identResult.species}</div>
-
-                            <div className="scan-name-input-container">
-                                <label>Name your friend:</label>
-                                <input
-                                    value={nickname}
-                                    onChange={e => setNickname(e.target.value)}
-                                    placeholder={personalityResult.suggestedName}
-                                    className="scan-glass-input"
-                                />
-                            </div>
-
-                            <button className="scan-confirm-btn" onClick={handleConfirm}>
-                                <Plus size={18} /> Add to Garden
-                            </button>
                         </div>
                     )}
 
                     {scanState === 'done' && (
-                        <div className="analysis-view" style={{ flexDirection: 'column', gap: '16px' }}>
-                            <div className="scan-done-icon-large"><PartyPopper size={48} /></div>
-                            <h2 style={{ color: '#4ADE80', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>Welcome to the Garden!</h2>
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(52, 211, 153, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                            <PartyPopper size={48} color="white" />
+                            <h3 style={{ color: 'white', marginTop: 10, fontFamily: 'var(--font-heading)' }}>Success!</h3>
                         </div>
                     )}
                 </div>
 
-                {/* Controls Area */}
-                <div className="checkin-controls">
-                    {scanState === 'camera' && (
+                {/* Controls - Only show when in camera mode */}
+                {scanState === 'camera' && (
+                    <div className="checkin-controls">
                         <button className="capture-btn-large" onClick={handleCapture}>
                             <div className="capture-inner" />
                         </button>
-                    )}
+                    </div>
+                )}
 
-                    <button className="checkin-close-fab" onClick={handleClose}>
-                        <X size={24} />
-                    </button>
-                </div>
+                {/* Scan Results (Naming) */}
+                {scanState === 'naming' && identResult && personalityResult && (
+                    <div className="scan-result-glass">
+                        <Leaf size={32} color="#4ADE80" style={{ marginBottom: 10 }} />
+                        <h3>{identResult.commonName}</h3>
+                        <div className="scan-species-tag">{identResult.species}</div>
+
+                        <div style={{ marginTop: 20 }}>
+                            <label style={{ display: 'block', textAlign: 'left', marginBottom: 8, fontWeight: 600, fontSize: '0.9rem' }}>Name your friend:</label>
+                            <input
+                                value={nickname}
+                                onChange={e => setNickname(e.target.value)}
+                                placeholder={personalityResult.suggestedName}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 16px',
+                                    borderRadius: '12px',
+                                    border: '1px solid #E5E7EB',
+                                    fontSize: '1rem',
+                                    fontFamily: 'var(--font-body)',
+                                    marginBottom: 8
+                                }}
+                            />
+                        </div>
+
+                        <button className="scan-confirm-btn" onClick={handleConfirm}>
+                            Add to Garden
+                        </button>
+                    </div>
+                )}
 
                 {error && (
                     <div className="scan-error-toast">

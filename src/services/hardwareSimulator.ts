@@ -76,9 +76,15 @@ class HardwareSimulator {
     // Let demo control moisture for showing zombie spawns
     setMoistureTrend(trend: 'stable' | 'rising' | 'falling'): void {
         this.moistureTrend = trend;
-        if (trend === 'rising') this.targetMoisture = 90; // Will trigger Drownface
+        if (trend === 'rising') this.targetMoisture = 50; // Will trigger Drownface but safe for quest (>40%)
         else if (trend === 'falling') this.targetMoisture = 10; // Will trigger Thirster
         else this.targetMoisture = 55; // Healthy
+    }
+
+    // Set moisture to an exact value instantly (for demo precision)
+    setMoistureValue(value: number): void {
+        this.config.baseSoilMoisture = value;
+        this.targetMoisture = value;
     }
 
     private generateSensorData(): SensorData {

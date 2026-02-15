@@ -1,6 +1,7 @@
 // Plantasia: Guardians — Garden HUD Overlay
 // Bubble-free design: text with contrast, Lucide icons, no emojis
 import { useGameStore } from '../../stores/gameStore';
+import { getSensorBridge } from '../../services/sensorBridge';
 import {
     Leaf,
     Coins,
@@ -85,9 +86,16 @@ export function GardenHUD() {
             {/* ─── Top-left: Title + Coins ─── */}
             <div className="hud-top-left">
                 <div className="hud-logo-container">
-                    <div className="hud-logo-icon">
-                        <Leaf size={22} strokeWidth={2.5} />
-                    </div>
+                    <img
+                        src="/imgs/logo.png"
+                        alt="Logo"
+                        style={{
+                            height: '36px',
+                            width: '36px',
+                            borderRadius: '8px',
+                            objectFit: 'cover'
+                        }}
+                    />
                     <div className="hud-logo-text">
                         <h1 className="hud-game-name">PLANTASIA</h1>
                         <span className="hud-game-sub">GUARDIANS</span>
@@ -198,6 +206,8 @@ export function GardenHUD() {
                     )}
                 </div>
             )}
+
+
         </div>
     );
 }

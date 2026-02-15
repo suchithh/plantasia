@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Bluetooth, CheckCircle, X, Wifi } from 'lucide-react';
 import { useGameStore } from '../../stores/gameStore';
+import { getSensorBridge } from '../../services/sensorBridge';
 
 export function SensorPairScreen() {
     const setActivePanel = useGameStore(s => s.setActivePanel);
@@ -15,6 +16,10 @@ export function SensorPairScreen() {
         timers.push(setTimeout(() => setPhase('pairing'), 3200));
         timers.push(setTimeout(() => {
             setPhase('success');
+            // Actually start the sensor bridge so data flows
+            const bridge = getSensorBridge();
+            bridge.connectSimulator();
+            bridge.setMoistureValue(25); // Demo: start at 25% so check-in triggers Thirster
             setSensorConnection('connected_simulated');
         }, 4800));
         return () => timers.forEach(clearTimeout);

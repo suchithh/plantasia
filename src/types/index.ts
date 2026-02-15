@@ -127,10 +127,7 @@ export type EmotionalState = 'sleepy' | 'content' | 'curious' | 'excited' | 'sta
 
 // ─── UI State ───
 
-export type ActivePanel =
-    | 'none' | 'plant_detail' | 'plant_chat' | 'zombie_info' | 'quest_list'
-    | 'scan' | 'health_check' | 'diagnosis'
-    | 'sensor_pair' | 'daily_checkin' | 'checkin_result' | 'shop';
+export type ActivePanel = 'none' | 'plant_detail' | 'plant_chat' | 'zombie_info' | 'quest_list' | 'scan' | 'sensor_pair' | 'daily_checkin' | 'checkin_result' | 'shop' | 'victory_scan';
 
 export interface ChatMessage {
     id: string;

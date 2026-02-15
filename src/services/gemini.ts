@@ -87,7 +87,7 @@ Think: dramatic diva, chill surfer, anxious worrier, wise grandparent, or bubbly
 
 Respond in this EXACT JSON format:
 {
-  "suggestedName": "A fun character name (like Gerald, Princess Fern, Captain Cactus, Zen)",
+  "suggestedName": "A fun character name (like Gerald, Princess Finn, Captain Cactus, Zen)",
   "personality": {
     "type": "one of: dramatic, chill, anxious, wise, cheerful",
     "quirks": ["quirk1", "quirk2", "quirk3"],

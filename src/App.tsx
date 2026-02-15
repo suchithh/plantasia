@@ -61,6 +61,7 @@ function GameToast({ event }: { event: GameEvent }) {
     }, []);
 
     if (!visible) return null;
+    if (event.type === 'challenger_approaching') return null;
 
     const { Icon } = config;
 
@@ -73,13 +74,14 @@ function GameToast({ event }: { event: GameEvent }) {
 }
 
 // Demo control panel
-function DemoControls({ sensorConnection, onConnectSim, onConnectBLE, onDisconnect, onTouch, onMoisture }: {
+function DemoControls({ sensorConnection, onConnectSim, onConnectBLE, onDisconnect, onTouch, onMoisture, onSetMoisture }: {
     sensorConnection: string;
     onConnectSim: () => void;
     onConnectBLE: () => void;
     onDisconnect: () => void;
     onTouch: () => void;
     onMoisture: (trend: 'stable' | 'rising' | 'falling') => void;
+    onSetMoisture: (value: number) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
 
@@ -108,7 +110,16 @@ function DemoControls({ sensorConnection, onConnectSim, onConnectBLE, onDisconne
                                 </button>
                             </div>
                             <div className="demo-group">
-                                <div className="demo-label">Moisture Simulation</div>
+                                <div className="demo-label">Moisture Presets</div>
+                                <button className="demo-btn danger" onClick={() => onSetMoisture(25)}>
+                                    <CloudSun size={16} /> Set 25%
+                                </button>
+                                <button className="demo-btn success" onClick={() => onSetMoisture(55)}>
+                                    <CircleCheck size={16} /> Set 55%
+                                </button>
+                            </div>
+                            <div className="demo-group">
+                                <div className="demo-label">Moisture Trends</div>
                                 <button className="demo-btn danger" onClick={() => onMoisture('rising')}>
                                     <Droplets size={16} /> Overwater
                                 </button>
@@ -174,6 +185,11 @@ export function App() {
         bridge.setMoistureTrend(trend);
     };
 
+    const handleSetMoisture = (value: number) => {
+        const bridge = getSensorBridge();
+        bridge.setMoistureValue(value);
+    };
+
     const handleDisconnect = () => {
         const bridge = getSensorBridge();
         bridge.disconnect();
@@ -203,20 +219,23 @@ export function App() {
             {activePanel === 'zombie_info' && <ZombieInfoPanel />}
             {activePanel === 'quest_list' && <QuestPanel />}
             {activePanel === 'scan' && <ScanView />}
+            {activePanel === 'victory_scan' && <ScanView mode="victory" />}
             {activePanel === 'sensor_pair' && <SensorPairScreen />}
             {activePanel === 'daily_checkin' && <DailyCheckIn />}
             {activePanel === 'checkin_result' && <CheckInResult />}
             {activePanel === 'shop' && <ShopPanel />}
 
             {/* Demo Controls */}
-            <DemoControls
+            {/* Demo Controls (Hidden as requested) */}
+            {/* <DemoControls
                 sensorConnection={sensorConnection}
                 onConnectSim={handleConnectSimulator}
                 onConnectBLE={handleConnectBLE}
                 onDisconnect={handleDisconnect}
                 onTouch={handleSimulateTouch}
                 onMoisture={handleMoistureTrend}
-            />
+                onSetMoisture={handleSetMoisture}
+            /> */}
         </div>
     );
 }

@@ -56,7 +56,7 @@ export const questTemplates: QuestTemplate[] = [
         stepActions: [
             { type: 'interaction', target: 'plant_chat' },
             { type: 'care', target: 'dry', value: 60 },
-            { type: 'interaction', target: 'scan' },
+            { type: 'interaction', target: 'checkin_result' },
         ],
         reward: { coins: 50, xp: 100, trophy: '🏆 Root Rot Slayer' },
         educational: 'Root rot kills more houseplants than any other problem. Roots need oxygen just like you do — waterlogged soil suffocates them!',
@@ -143,7 +143,7 @@ export const questTemplates: QuestTemplate[] = [
         stepDescriptions: [
             'Ask your plant what\'s wrong',
             'Water until soil moisture > 40%',
-            'Take a picture of the plant to prove it',
+            'Take a paicture of the plant to confirm completion',
         ],
         stepSubtitles: [
             'Tap your plant to open chat',
@@ -153,7 +153,7 @@ export const questTemplates: QuestTemplate[] = [
         stepActions: [
             { type: 'interaction', target: 'plant_chat' },
             { type: 'care', target: 'water', value: 40 },
-            { type: 'interaction', target: 'scan' },
+            { type: 'interaction', target: 'checkin_result' },
         ],
         reward: { coins: 40, xp: 80, trophy: '💪 Hydration Hero' },
         educational: 'Consistent watering is key. Most plants like a "soak and dry" approach — water thoroughly, then wait until the top inch of soil is dry.',

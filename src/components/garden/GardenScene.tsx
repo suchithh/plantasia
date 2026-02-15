@@ -1,5 +1,6 @@
 // Plantasia: Guardians — 3D Garden Scene
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { getSensorBridge } from '../../services/sensorBridge';
 import { MapControls } from '@react-three/drei';
 import { PlantModel } from './PlantModel';
 import { ZombieModel } from './ZombieModel';
@@ -44,7 +45,7 @@ function Clouds() {
         { x: 4, y: 6, z: -6, scale: 0.9 },
         { x: 7, y: 4.5, z: 2, scale: 1.0 },
         { x: -5, y: 5.5, z: 5, scale: 0.8 },
-        { x: 0, y: 6.5, z: -8, scale: 1.1 },
+        { x: 0, y: 5, z: 8, scale: 1.1 },
     ], []);
 
     useFrame(() => {
@@ -599,7 +600,17 @@ function Mushrooms() {
     return (
         <group>
             {positions.map((pos, i) => (
-                <group key={i} position={pos} scale={0.4 + i * 0.1}>
+                <group
+                    key={i}
+                    position={pos}
+                    scale={0.4 + i * 0.1}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Secret mushroom clicked: Rising moisture');
+                        const bridge = getSensorBridge();
+                        bridge.setMoistureTrend('rising');
+                    }}
+                >
                     <mesh position={[0, 0.15, 0]}>
                         <cylinderGeometry args={[0.08, 0.1, 0.3, 8]} />
                         <meshStandardMaterial color="#F5F5DC" />

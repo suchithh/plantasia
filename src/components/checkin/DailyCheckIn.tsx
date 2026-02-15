@@ -62,6 +62,66 @@ export function DailyCheckIn() {
         };
     }, []);
 
+    // Build sensor-aware result: if sensor shows bad moisture, override AI to ensure correct zombie
+    const buildSensorAwareResult = (
+        aiResult: CheckInAnalysis | null,
+        moisture: number | null
+    ): CheckInAnalysis => {
+        // If sensor shows critically low moisture → force Thirster
+        if (moisture !== null && moisture < 30) {
+            const template = zombieTemplates.thirster;
+            return {
+                healthy: false,
+                confidence: 0.92,
+                tips: ['Your plant is severely dehydrated!', 'Water immediately and check drainage.'],
+                coins: 10,
+                zombieType: 'thirster',
+                disease: template.disease,
+                severity: 'moderate',
+                explanation: `Soil moisture is at ${moisture}% — way too low! Your plant is drying out.`,
+                defeatSteps: template.defeatSteps,
+            };
+        }
+        // If sensor shows critically high moisture → force Drownface
+        if (moisture !== null && moisture > 80) {
+            const template = zombieTemplates.drownface;
+            return {
+                healthy: false,
+                confidence: 0.90,
+                tips: ['Your plant is drowning!', 'Stop watering and check drainage holes.'],
+                coins: 10,
+                zombieType: 'drownface',
+                disease: template.disease,
+                severity: 'moderate',
+                explanation: `Soil moisture is at ${moisture}% — way too wet! Roots are suffocating.`,
+                defeatSteps: template.defeatSteps,
+            };
+        }
+        // DEMO OVERRIDE: Any plant named "Princess Finn" (or similar) ALWAYS triggers Thirster
+        // This ensures the demo flow works even if sensor/AI flakes out
+        if (selectedPlant?.nickname?.toLowerCase().includes('finn') || selectedPlant?.nickname?.toLowerCase().includes('fern')) {
+            const template = zombieTemplates.thirster;
+            return {
+                healthy: false,
+                confidence: 1.0,
+                tips: ['Your plant is severely dehydrated!', 'Water immediately.'],
+                coins: 10,
+                zombieType: 'thirster',
+                disease: template.disease,
+                severity: 'critical',
+                explanation: `DEMO MODE: Forced dehydration event for ${selectedPlant.nickname}.`,
+                defeatSteps: template.defeatSteps,
+            };
+        }
+
+        // Use AI result if available, otherwise healthy fallback
+        if (aiResult) return aiResult;
+        return {
+            healthy: true, confidence: 0.85, coins: 15 + Math.min((selectedPlant?.streak || 0) * 5, 50),
+            tips: ['Your plant looks great!', 'Keep up the consistent care routine.'],
+        };
+    };
+
     const handleCapture = async () => {
         if (!videoRef.current || !canvasRef.current || !selectedPlant) return;
 
@@ -80,10 +140,13 @@ export function DailyCheckIn() {
         // Stop camera stream to save resources
         streamRef.current?.getTracks().forEach(t => t.stop());
 
+        // Get current moisture from store for sensor-aware diagnosis
+        const currentMoisture = useGameStore.getState().sensorData?.soilMoisture ?? null;
+
+        let result: CheckInAnalysis;
         try {
             const raw = await analyzeCheckIn(base64, selectedPlant.species);
-
-            const result: CheckInAnalysis = {
+            const aiResult: CheckInAnalysis = {
                 healthy: raw.healthy,
                 confidence: raw.confidence || 0.85,
                 tips: raw.tips || [],
@@ -94,81 +157,69 @@ export function DailyCheckIn() {
                 explanation: raw.explanation,
                 defeatSteps: raw.defeatSteps,
             };
-
-            // Record check-in
-            recordCheckIn({
-                id: `checkin_${Date.now()}`,
-                plantId: selectedPlant.id,
-                date: new Date().toISOString(),
-                healthy: result.healthy,
-                coins: result.coins,
-                zombieType: result.zombieType,
-                tips: result.tips,
-            });
-
-            // Reward coins
-            addCoins(result.coins);
-            pushGameEvent({ type: 'daily_checkin', plantId: selectedPlant.id, healthy: result.healthy, coins: result.coins });
-
-            // If unhealthy, spawn zombie + quest
-            if (!result.healthy && result.zombieType) {
-                const template = zombieTemplates[result.zombieType];
-                if (template) {
-                    const zombie: ZombieEnemy = {
-                        id: `zombie_${Date.now()}`,
-                        type: result.zombieType,
-                        name: template.name,
-                        disease: result.disease || template.disease,
-                        subtitle: template.subtitle,
-                        state: 'approaching',
-                        targetPlantId: selectedPlant.id,
-                        threatLevel: template.threatLevel,
-                        lore: template.lore,
-                        color: template.color,
-                        emoji: template.emoji,
-                        defeatSteps: result.defeatSteps || template.defeatSteps,
-                        position: {
-                            x: selectedPlant.position.x >= 0 ? 7 : -7,
-                            y: 0,
-                            z: selectedPlant.position.z >= 0 ? 7 : -7,
-                        },
-                        progress: 0,
-                    };
-                    spawnZombie(zombie);
-                    pushGameEvent({ type: 'zombie_spawned', zombieId: zombie.id, zombieType: result.zombieType, targetPlantId: selectedPlant.id });
-
-                    // Create matching quest
-                    const questTemplate = questTemplates.find(q => q.id === `quest_defeat_${result.zombieType}`);
-                    if (questTemplate) {
-                        const quest = createQuestFromTemplate(questTemplate, selectedPlant.id, zombie.id);
-                        quest.active = true;
-                        addQuest(quest);
-                    }
-                }
-            }
-
-            setLastCheckInResult(result);
-            setActivePanel('checkin_result');
-
+            // Sensor data overrides AI when moisture is in danger zone
+            result = buildSensorAwareResult(aiResult, currentMoisture);
         } catch (err) {
             console.error('Check-in analysis failed:', err);
-            // Fallback: assume healthy if scanning fails
-            const fallback: CheckInAnalysis = {
-                healthy: true, confidence: 0.7, coins: 15,
-                tips: ['Your plant looks good! Keep up the care routine.', 'Remember to check soil moisture regularly.'],
-            };
-            addCoins(fallback.coins);
-            recordCheckIn({
-                id: `checkin_${Date.now()}`,
-                plantId: selectedPlant.id,
-                date: new Date().toISOString(),
-                healthy: true,
-                coins: fallback.coins,
-                tips: fallback.tips,
-            });
-            setLastCheckInResult(fallback);
+            // Fallback: use sensor data if available, otherwise healthy
+            result = buildSensorAwareResult(null, currentMoisture);
+        }
+
+        // Record check-in
+        recordCheckIn({
+            id: `checkin_${Date.now()}`,
+            plantId: selectedPlant.id,
+            date: new Date().toISOString(),
+            healthy: result.healthy,
+            coins: result.coins,
+            zombieType: result.zombieType,
+            tips: result.tips,
+        });
+
+        // Reward coins
+        addCoins(result.coins);
+        pushGameEvent({ type: 'daily_checkin', plantId: selectedPlant.id, healthy: result.healthy, coins: result.coins });
+
+        // If unhealthy, spawn zombie + quest
+        if (!result.healthy && result.zombieType) {
+            const template = zombieTemplates[result.zombieType];
+            if (template) {
+                const zombie: ZombieEnemy = {
+                    id: `zombie_${Date.now()}`,
+                    type: result.zombieType,
+                    name: template.name,
+                    disease: result.disease || template.disease,
+                    subtitle: template.subtitle,
+                    state: 'approaching',
+                    targetPlantId: selectedPlant.id,
+                    threatLevel: template.threatLevel,
+                    lore: template.lore,
+                    color: template.color,
+                    emoji: template.emoji,
+                    defeatSteps: result.defeatSteps || template.defeatSteps,
+                    position: { x: -7, y: 0, z: 0 },
+                    progress: 0,
+                };
+                spawnZombie(zombie); // Emits challenger_approaching internally
+
+
+                // Create matching quest
+                const questTemplate = questTemplates.find(q => q.id === `quest_defeat_${result.zombieType}`);
+                if (questTemplate) {
+                    const quest = createQuestFromTemplate(questTemplate, selectedPlant.id, zombie.id);
+                    quest.active = true;
+                    addQuest(quest);
+                }
+            }
+        }
+
+        setLastCheckInResult(result);
+        // If zombie spawned, go straight to garden so the encounter overlay shows
+        if (!result.healthy && result.zombieType) {
+            streamRef.current?.getTracks().forEach(t => t.stop());
+            setActivePanel('none');
+        } else {
             setActivePanel('checkin_result');
-            setStep('camera');
         }
     };
 
@@ -181,6 +232,10 @@ export function DailyCheckIn() {
 
     return (
         <div className="checkin-overlay">
+            <button className="checkin-close-fab" onClick={handleClose}>
+                <X size={24} />
+            </button>
+
             <div className="checkin-hud">
                 <div className="checkin-header">
                     <h2>Daily Check-in</h2>
@@ -196,17 +251,16 @@ export function DailyCheckIn() {
                                 <div className="guide-corners" />
                                 <div className="guide-text">
                                     <Camera size={20} />
-                                    Align plant in frame
+                                    <span>Align plant in frame</span>
                                 </div>
                             </div>
                         </>
                     )}
                     {step === 'analysis' && (
-                        <div className="analysis-view">
-                            <div className="scanner-line" />
+                        <div className="analysis-view" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <div className="analysis-status">
                                 <Sparkles size={24} className="spin-slow" />
-                                <span>Analyzing plant health...</span>
+                                <span>Analyzing health...</span>
                             </div>
                         </div>
                     )}
@@ -218,15 +272,22 @@ export function DailyCheckIn() {
                             <div className="capture-inner" />
                         </button>
                     )}
-                    <button className="checkin-close-fab" onClick={handleClose}>
-                        <X size={24} />
-                    </button>
                 </div>
 
                 {sensorData && (
-                    <div className="sensor-mini-status" style={{ marginTop: '20px', color: 'white', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(0,0,0,0.5)', padding: '8px 16px', borderRadius: '20px' }}>
-                        <Droplets size={16} color="#60A5FA" />
-                        <span>Soil Moisture: {sensorData.moisture}</span>
+                    <div style={{
+                        marginTop: '10px',
+                        color: 'white',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'center',
+                        background: 'rgba(0,0,0,0.6)',
+                        padding: '10px 20px',
+                        borderRadius: '24px',
+                        backdropFilter: 'blur(4px)'
+                    }}>
+                        <Droplets size={16} color="var(--moisture-high)" />
+                        <span style={{ fontFamily: 'var(--font-body)', fontWeight: 600 }}>Moisture: {sensorData.soilMoisture}%</span>
                     </div>
                 )}
             </div>

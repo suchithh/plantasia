@@ -20,12 +20,22 @@ export function QuestPanel() {
     const dailyQuests = activeQuests.filter(q => q.type !== 'battle');
 
     const handleStepToggle = (questId: string, stepId: string) => {
-        // Only allow manual toggling if no action is defined
         const quest = quests.find(q => q.id === questId);
         const step = quest?.steps.find(s => s.id === stepId);
 
-        if (step && !step.action) {
-            completeQuestStep(questId, stepId);
+        if (step) {
+            if (step.action) {
+                // Handle navigation actions
+                if (step.action.type === 'interaction' && step.action.target === 'checkin_result') {
+                    setActivePanel('victory_scan');
+                } else if (step.action.type === 'navigate' && step.action.target === 'scan') {
+                    setActivePanel('scan');
+                }
+                // Add other action handlers as needed
+            } else {
+                // Manual toggle if no action
+                completeQuestStep(questId, stepId);
+            }
         }
     };
 

@@ -100,6 +100,13 @@ class SensorBridge {
         }
     }
 
+    // Set moisture to exact value instantly (for demo precision)
+    setMoistureValue(value: number): void {
+        if (!this.isRealHardware) {
+            getHardwareSimulator().setMoistureValue(value);
+        }
+    }
+
     // Subscribe to raw sensor data
     onSensorData(cb: SensorCallback): () => void {
         this.sensorListeners.push(cb);

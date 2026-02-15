@@ -1,10 +1,9 @@
 // Plantasia: Guardians — Mock Data for Demo
 import type { PlantCharacter, ZombieEnemy, Quest } from '../types';
-import { zombieTemplates } from '../constants/zombies';
 import { createQuestFromTemplate, questTemplates } from '../constants/quests';
-import { colors } from '../constants/colors';
 
 // ─── Demo Plants ───
+// Demo starts with just Gerald + Zen. Princess Finn is added live via scan.
 
 export const mockPlants: PlantCharacter[] = [
     {
@@ -19,6 +18,7 @@ export const mockPlants: PlantCharacter[] = [
         },
         avatarColor: '#22C55E',
         healthStatus: 'healthy',
+        mood: 'happy',
         position: { x: -2, y: 0, z: 0 },
         xp: 250,
         level: 3,
@@ -39,6 +39,7 @@ export const mockPlants: PlantCharacter[] = [
         },
         avatarColor: '#059669',
         healthStatus: 'healthy',
+        mood: 'happy',
         position: { x: 2, y: 0, z: 0 },
         xp: 180,
         level: 2,
@@ -47,65 +48,21 @@ export const mockPlants: PlantCharacter[] = [
         shieldStrength: 80,
         createdAt: new Date().toISOString(),
     },
-    {
-        id: 'plant_princess',
-        species: 'Calathea ornata',
-        commonName: 'Pin-Stripe Calathea',
-        nickname: 'Princess Fern',
-        personality: {
-            type: 'anxious',
-            quirks: ['Worries about everything', 'Needs constant reassurance', 'Sensitive to change'],
-            speakingStyle: 'Nervous and dramatic, asks lots of "what if" questions',
-        },
-        avatarColor: '#A855F7',
-        healthStatus: 'threatened',
-        position: { x: 0, y: 0, z: 2 },
-        xp: 120,
-        level: 2,
-        happiness: 45,
-        streak: 1,
-        shieldStrength: 20,
-        createdAt: new Date().toISOString(),
-    },
 ];
 
 // ─── Demo Zombies ───
+// No pre-spawned zombies — Thirster spawns live during check-in demo
 
-const drownfaceTemplate = zombieTemplates.drownface;
-export const mockZombies: ZombieEnemy[] = [
-    {
-        id: 'zombie_drownface_1',
-        type: 'drownface',
-        name: drownfaceTemplate.name,
-        disease: drownfaceTemplate.disease,
-        subtitle: drownfaceTemplate.subtitle,
-        state: 'approaching',
-        targetPlantId: 'plant_princess',
-        threatLevel: drownfaceTemplate.threatLevel,
-        lore: drownfaceTemplate.lore,
-        color: drownfaceTemplate.color,
-        emoji: drownfaceTemplate.emoji,
-        defeatSteps: drownfaceTemplate.defeatSteps,
-        position: { x: -7, y: 0, z: 7 },
-        progress: 0.3,
-    },
-];
+export const mockZombies: ZombieEnemy[] = [];
 
 // ─── Demo Quests ───
+// Only daily check-in quest. Battle quest created dynamically when zombie spawns.
 
 export const mockQuests: Quest[] = [
-    createQuestFromTemplate(
-        questTemplates.find(q => q.id === 'quest_defeat_drownface')!,
-        'plant_princess',
-        'zombie_drownface_1'
-    ),
     createQuestFromTemplate(
         questTemplates.find(q => q.id === 'quest_daily_checkin')!,
     ),
 ];
-
-// Mark first quest as active
-mockQuests[0].active = true;
 
 // ─── Dynamic garden positions based on size ───
 import { gardenLayouts } from './shopData';
