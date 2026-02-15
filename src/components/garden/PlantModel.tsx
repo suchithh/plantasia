@@ -1,9 +1,10 @@
-// Plantasia: Guardians — 3D Plant Character Model
-// Uses only Three.js primitives — no drei Html (avoids crash with orthographic + drei v10)
-import { useRef, useMemo } from 'react';
+// Plantasia: Guardians — High Fidelity 3D Plant Character Model
+import { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { PlantCharacter } from '../../types';
 import * as THREE from 'three';
+import { useGameStore } from '../../stores/gameStore';
+import { damp } from '../../utils/animationUtils'; // Smooth damping utility
 
 interface PlantModelProps {
     plant: PlantCharacter;
@@ -18,52 +19,6 @@ const statusColors: Record<string, string> = {
     dead: '#6B7280',
 };
 
-// ... existing imports ...
-import { useGameStore } from '../../stores/gameStore';
-
-// Create a canvas-based sprite texture for the name tag
-// Premium floating text — no bubble, just serif text with layered shadows
-function createNameTexture(name: string, _initial: string, statusColor: string): THREE.CanvasTexture {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 80;
-    const ctx = canvas.getContext('2d')!;
-
-    // Setup text
-    ctx.font = '700 40px "Noto Serif", Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    // Dark outline for readability over any background
-    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 2;
-    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-    ctx.lineWidth = 5;
-    ctx.lineJoin = 'round';
-    ctx.strokeText(name, 256, 30);
-
-    // White fill with soft glow
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 1;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(name, 256, 30);
-
-    // Subtle colored accent line beneath
-    ctx.shadowColor = 'transparent';
-    const textWidth = ctx.measureText(name).width;
-    ctx.fillStyle = statusColor;
-    ctx.globalAlpha = 0.65;
-    ctx.beginPath();
-    ctx.roundRect(256 - textWidth / 2, 56, textWidth, 3, 1.5);
-    ctx.fill();
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
-}
-
 const personalityInitial: Record<string, string> = {
     dramatic: 'D',
     chill: 'C',
@@ -72,26 +27,136 @@ const personalityInitial: Record<string, string> = {
     cheerful: 'Ch',
 };
 
-// Floating hearts when happy
+// --- Procedural Geometry Generators ---
+
+// Create a curved identifying pot profile using LatheGeometry
+function createPotGeometry() {
+    const points = [];
+    // Base
+    points.push(new THREE.Vector2(0, 0));
+    points.push(new THREE.Vector2(0.3, 0));
+    // Curved body
+    for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const x = 0.3 + Math.sin(t * Math.PI) * 0.1; // Bulge out
+        const y = t * 0.45;
+        points.push(new THREE.Vector2(x, y));
+    }
+    // Rim
+    points.push(new THREE.Vector2(0.42, 0.45));
+    points.push(new THREE.Vector2(0.42, 0.5));
+    points.push(new THREE.Vector2(0.35, 0.5));
+    points.push(new THREE.Vector2(0.35, 0.45)); // Inner lip
+
+    return new THREE.LatheGeometry(points, 32);
+}
+
+// Create a realistic leaf shape for ExtrudeGeometry
+function createLeafShape() {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    // Left side curve
+    shape.bezierCurveTo(-0.1, 0.1, -0.2, 0.3, 0, 0.6);
+    // Right side curve
+    shape.bezierCurveTo(0.2, 0.3, 0.1, 0.1, 0, 0);
+    return shape;
+}
+
+// Create a swaying stem curve
+function createStemCurve(height: number = 1.0, bent: number = 0) {
+    return new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(bent * 0.2, height * 0.3, 0),
+        new THREE.Vector3(-bent * 0.1, height * 0.6, 0),
+        new THREE.Vector3(0, height, 0),
+    ]);
+}
+
+// Premium floating text texture
+function createNameTexture(name: string, _initial: string, statusColor: string): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 120; // Taller for better layout
+    const ctx = canvas.getContext('2d')!;
+
+    // Setup text
+    ctx.font = '700 48px "Noto Serif", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Dark outline
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 6;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(name, 256, 50);
+
+    // White fill with soft glow
+    ctx.shadowColor = 'rgba(255,255,255,0.3)';
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetY = 0;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(name, 256, 50);
+
+    // Elegant underline
+    const textWidth = ctx.measureText(name).width;
+    ctx.fillStyle = statusColor;
+    ctx.globalAlpha = 0.8;
+    ctx.shadowColor = statusColor;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.roundRect(256 - textWidth / 2 - 10, 85, textWidth + 20, 6, 3);
+    ctx.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+}
+
+
 function HappyParticles({ position }: { position: [number, number, number] }) {
     const groupRef = useRef<THREE.Group>(null);
-
-    useFrame(() => {
-        if (groupRef.current) {
-            const t = performance.now() * 0.001;
-            groupRef.current.children.forEach((child, i) => {
-                child.position.y = 1.2 + Math.sin(t * 2 + i) * 0.15;
-                child.rotation.z = Math.sin(t * 3 + i * 0.5) * 0.2;
-            });
-        }
+    useFrame(({ clock }) => {
+        if (!groupRef.current) return;
+        const t = clock.getElapsedTime();
+        groupRef.current.children.forEach((child, i) => {
+            child.position.y = 1.5 + Math.sin(t * 2 + i) * 0.2 + (i * 0.1);
+            child.position.x = Math.sin(t * 3 + i * 2) * 0.3;
+            child.scale.setScalar(0.1 + Math.sin(t * 4 + i) * 0.05);
+        });
     });
 
     return (
         <group ref={groupRef} position={position}>
-            {[0, 1, 2].map((i) => (
-                <sprite key={i} position={[Math.sin(i * 2.1) * 0.4, 1.2 + i * 0.1, Math.cos(i * 2.1) * 0.4]} scale={[0.15, 0.15, 1]}>
-                    <spriteMaterial color="#F472B6" transparent opacity={0.8} />
-                </sprite>
+            {[0, 1, 2, 3].map((i) => (
+                <mesh key={i} position={[0, 0, 0]}>
+                    <planeGeometry args={[0.3, 0.3]} />
+                    <meshBasicMaterial
+                        color="#F472B6"
+                        transparent
+                        opacity={0.8}
+                        side={THREE.DoubleSide}
+                        map={useMemo(() => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 64; canvas.height = 64;
+                            const ctx = canvas.getContext('2d')!;
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.beginPath();
+                            // Heart shape
+                            ctx.moveTo(32, 20);
+                            ctx.bezierCurveTo(32, 17, 28, 10, 16, 10);
+                            ctx.bezierCurveTo(0, 10, 0, 27.5, 0, 27.5);
+                            ctx.bezierCurveTo(0, 40, 16, 52, 32, 60);
+                            ctx.bezierCurveTo(48, 52, 64, 40, 64, 27.5);
+                            ctx.bezierCurveTo(64, 27.5, 64, 10, 48, 10);
+                            ctx.bezierCurveTo(38, 10, 32, 17, 32, 20);
+                            ctx.fill();
+                            return new THREE.CanvasTexture(canvas);
+                        }, [])}
+                    />
+                </mesh>
             ))}
         </group>
     );
@@ -99,61 +164,77 @@ function HappyParticles({ position }: { position: [number, number, number] }) {
 
 export function PlantModel({ plant, onClick }: PlantModelProps) {
     const groupRef = useRef<THREE.Group>(null);
-    const leafRef = useRef<THREE.Group>(null);
-    const eyeRef = useRef<THREE.Group>(null);
+    const headRef = useRef<THREE.Group>(null);
+    const leavesRef = useRef<THREE.Group>(null);
+
+    // Animation Refs for dampening
+    const currentScale = useRef(1);
+    const currentRotZ = useRef(0);
+    const currentPosY = useRef(0);
 
     const color = statusColors[plant.healthStatus] || plant.avatarColor;
     const isDead = plant.healthStatus === 'dead';
     const isThreatened = plant.healthStatus === 'threatened';
     const inBattle = plant.healthStatus === 'in_battle';
     const isHealthy = plant.healthStatus === 'healthy';
-    const activeReaction = plant.activeReaction;
 
-    // Memoize the name tag texture
+    // Geometry Memos
+    const potGeometry = useMemo(() => createPotGeometry(), []);
+    const leafGeometry = useMemo(() => new THREE.ExtrudeGeometry(createLeafShape(), { depth: 0.02, bevelEnabled: true, bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 2 }), []);
+    const stemCurve = useMemo(() => createStemCurve(0.8, -0.2), []); // Slight natural bend
+    const stemGeometry = useMemo(() => new THREE.TubeGeometry(stemCurve, 20, 0.04, 8, false), [stemCurve]);
+
     const nameTexture = useMemo(() => {
         const initial = personalityInitial[plant.personality.type] || 'P';
         return createNameTexture(plant.nickname, initial, color);
     }, [plant.nickname, plant.personality.type, color]);
 
-    useFrame(() => {
+    useFrame((state, delta) => {
         if (!groupRef.current) return;
-        const t = performance.now() * 0.001;
 
+        const t = state.clock.getElapsedTime();
+        let targetScale = 1;
+        let targetRotZ = 0;
+        let targetPosY = 0;
+
+        // --- State Dependent Targets ---
         if (isDead) {
-            groupRef.current.rotation.z += (0.3 - groupRef.current.rotation.z) * 0.02;
-        } else if (isThreatened) {
-            groupRef.current.rotation.z = Math.sin(t * 6) * 0.08;
-            groupRef.current.position.y = Math.sin(t * 8) * 0.02;
+            targetRotZ = 0.3; // Slumped
+        } else if (plant.activeReaction === 'bounce') {
+            targetPosY = Math.abs(Math.sin(t * 12)) * 0.4;
+            targetScale = 1 + Math.sin(t * 20) * 0.15;
+        } else if (plant.activeReaction === 'shake' || isThreatened) {
+            targetRotZ = Math.sin(t * 25) * 0.15;
+        } else if (plant.activeReaction === 'wiggle') {
+            targetRotZ = Math.sin(t * 8) * 0.1;
         } else if (inBattle) {
-            const scale = 1 + Math.sin(t * 8) * 0.05;
-            groupRef.current.scale.setScalar(scale);
-        } else if (activeReaction === 'bounce') {
-            groupRef.current.position.y = Math.abs(Math.sin(t * 10)) * 0.5;
-            groupRef.current.scale.setScalar(1 + Math.sin(t * 20) * 0.1);
-        } else if (activeReaction === 'shake') {
-            groupRef.current.rotation.z = Math.sin(t * 30) * 0.15;
-        } else if (activeReaction === 'spin') {
-            groupRef.current.rotation.y += 0.2;
-        } else if (activeReaction === 'wiggle') {
-            groupRef.current.rotation.z = Math.sin(t * 15) * 0.1;
-            groupRef.current.scale.x = 1 + Math.sin(t * 15) * 0.1;
+            targetScale = 1.1 + Math.sin(t * 5) * 0.05; // Pulsing
         } else {
-            const breathe = 1 + Math.sin(t * 2) * 0.02;
-            groupRef.current.scale.set(breathe, breathe, breathe);
-            groupRef.current.rotation.z = Math.sin(t * 1) * 0.015;
-            // Reset position if not bouncing
-            groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, 0, 0.1);
+            // Idle breathing
+            targetScale = 1 + Math.sin(t * 1.5) * 0.03;
+            targetRotZ = Math.sin(t * 0.8) * 0.02;
         }
 
-        if (leafRef.current && !isDead) {
-            leafRef.current.rotation.z = Math.sin(t * 1.5) * 0.1;
+        // --- Smooth Damping ---
+        currentScale.current = damp(currentScale.current, targetScale, 8, delta);
+        currentRotZ.current = damp(currentRotZ.current, targetRotZ, 8, delta);
+        currentPosY.current = damp(currentPosY.current, targetPosY, 10, delta); // Snappier Y for bounce
+
+        // Apply transformations
+        groupRef.current.scale.setScalar(currentScale.current);
+        groupRef.current.rotation.z = currentRotZ.current;
+        groupRef.current.position.y = currentPosY.current;
+
+
+        // Secondary animations
+        if (headRef.current && !isDead) {
+            // Head tracks mouse slightly or just bobs
+            headRef.current.rotation.y = Math.sin(t * 0.5) * 0.1;
+            headRef.current.rotation.x = Math.sin(t * 0.7) * 0.05;
         }
 
-        // Eye blink
-        if (eyeRef.current && !isDead) {
-            const blinkCycle = (t * 0.5) % 4;
-            const isBlinking = blinkCycle > 3.9;
-            eyeRef.current.scale.y = isBlinking ? 0.1 : 1;
+        if (leavesRef.current && !isDead) {
+            leavesRef.current.rotation.y = Math.cos(t * 0.3) * 0.05;
         }
     });
 
@@ -167,233 +248,173 @@ export function PlantModel({ plant, onClick }: PlantModelProps) {
                 useGameStore.getState().triggerQuestAction('interaction', 'plant_tap');
             }}
         >
-            {/* Shadow on ground */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.48, 0]}>
-                <circleGeometry args={[0.4, 16]} />
-                <meshStandardMaterial color="#000000" transparent opacity={0.15} />
+            {/* Shadow */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                <circleGeometry args={[0.45, 32]} />
+                <meshBasicMaterial color="#000000" transparent opacity={0.2} />
             </mesh>
 
-            {/* Pot - terracotta style */}
-            <mesh position={[0, 0, 0]} castShadow>
-                <cylinderGeometry args={[0.38, 0.28, 0.45, 16]} />
-                <meshStandardMaterial color="#C2845A" roughness={0.8} />
-            </mesh>
-            {/* Pot rim */}
-            <mesh position={[0, 0.23, 0]}>
-                <torusGeometry args={[0.38, 0.05, 8, 16]} />
-                <meshStandardMaterial color="#D4956B" />
+            {/* Pot */}
+            <mesh geometry={potGeometry} castShadow receiveShadow>
+                <meshStandardMaterial color="#C2845A" roughness={0.6} />
             </mesh>
             {/* Soil */}
-            <mesh position={[0, 0.2, 0]}>
-                <cylinderGeometry args={[0.34, 0.34, 0.06, 16]} />
-                <meshStandardMaterial color="#5C4033" />
+            <mesh position={[0, 0.4, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <circleGeometry args={[0.32, 16]} />
+                <meshStandardMaterial color="#3E2723" roughness={1} />
             </mesh>
 
-            {/* Stem - thicker and greener */}
-            <mesh position={[0, 0.42, 0]}>
-                <cylinderGeometry args={[0.06, 0.08, 0.4, 8]} />
-                <meshStandardMaterial color={isDead ? '#9CA3AF' : '#228B22'} />
-            </mesh>
-
-            {/* Plant body - the face lives here */}
-            <group position={[0, 0.75, 0]}>
-                <mesh castShadow>
-                    <sphereGeometry args={[0.38, 20, 20]} />
-                    <meshStandardMaterial
-                        color={isDead ? '#9CA3AF' : color}
-                        emissive={inBattle ? '#F87171' : isHealthy ? color : '#000000'}
-                        emissiveIntensity={inBattle ? 0.3 : isHealthy ? 0.1 : 0}
-                    />
+            {/* Plant Structure */}
+            <group position={[0, 0.4, 0]}>
+                {/* Stem */}
+                <mesh geometry={stemGeometry} castShadow>
+                    <meshStandardMaterial color={isDead ? '#8D6E63' : '#4CAF50'} roughness={0.7} />
                 </mesh>
 
-                {/* FACE - makes it cute! */}
-                {!isDead && (
-                    <group position={[0, 0.02, 0.35]}>
-                        {/* Eyes */}
-                        <group ref={eyeRef}>
-                            <mesh position={[-0.1, 0.05, 0]}>
-                                <sphereGeometry args={[0.06, 8, 8]} />
-                                <meshStandardMaterial color="#1F2937" />
-                            </mesh>
-                            <mesh position={[0.1, 0.05, 0]}>
-                                <sphereGeometry args={[0.06, 8, 8]} />
-                                <meshStandardMaterial color="#1F2937" />
-                            </mesh>
-                            {/* Eye shine */}
-                            <mesh position={[-0.08, 0.07, 0.03]}>
-                                <sphereGeometry args={[0.02, 6, 6]} />
-                                <meshStandardMaterial color="#FFFFFF" />
-                            </mesh>
-                            <mesh position={[0.12, 0.07, 0.03]}>
-                                <sphereGeometry args={[0.02, 6, 6]} />
-                                <meshStandardMaterial color="#FFFFFF" />
+                {/* Leaves - arranged spirally */}
+                <group ref={leavesRef}>
+                    {[0.2, 0.4, 0.6].map((h, i) => (
+                        <group key={i} position={[0, 0.2 + h, 0]} rotation={[0, i * 2.5, 0]}>
+                            <mesh
+                                geometry={leafGeometry}
+                                position={[0.05, 0, 0]}
+                                rotation={[0.5, 0, -0.5]}
+                                castShadow
+                            >
+                                <meshStandardMaterial
+                                    color={isDead ? '#A1887F' : '#66BB6A'}
+                                    roughness={0.6}
+                                    side={THREE.DoubleSide}
+                                />
                             </mesh>
                         </group>
+                    ))}
+                </group>
 
-                        {/* Mouth - changes with status */}
-                        {isHealthy && (
-                            // Happy smile
-                            <mesh position={[0, -0.08, 0]} rotation={[0, 0, 0]}>
-                                <torusGeometry args={[0.06, 0.015, 8, 12, Math.PI]} />
-                                <meshStandardMaterial color="#1F2937" />
-                            </mesh>
-                        )}
-                        {isThreatened && (
-                            // Worried O mouth
-                            <mesh position={[0, -0.1, 0]}>
-                                <sphereGeometry args={[0.04, 8, 8]} />
-                                <meshStandardMaterial color="#1F2937" />
-                            </mesh>
-                        )}
-                        {inBattle && (
-                            // Determined line
-                            <mesh position={[0, -0.1, 0]}>
-                                <boxGeometry args={[0.1, 0.02, 0.02]} />
-                                <meshStandardMaterial color="#1F2937" />
-                            </mesh>
-                        )}
+                {/* Head / Flower */}
+                <group ref={headRef} position={[0, 0.85, 0]}>
+                    <mesh castShadow>
+                        <sphereGeometry args={[0.3, 32, 32]} />
+                        <meshStandardMaterial
+                            color={isDead ? '#BCAAA4' : color}
+                            emissive={inBattle ? '#F44336' : color}
+                            emissiveIntensity={inBattle ? 0.4 : 0.1}
+                            roughness={0.4}
+                        />
+                    </mesh>
 
-                        {/* Blush when happy */}
-                        {isHealthy && (
-                            <>
-                                <mesh position={[-0.15, -0.02, 0]}>
-                                    <circleGeometry args={[0.04, 8]} />
-                                    <meshStandardMaterial color="#FDA4AF" transparent opacity={0.6} />
+                    {/* Face Details */}
+                    {!isDead && (
+                        <group position={[0, 0, 0.26]} scale={0.8}>
+                            {/* Eyes */}
+                            <group position={[0, 0.05, 0]}>
+                                <mesh position={[-0.12, 0, 0]}>
+                                    <capsuleGeometry args={[0.04, 0.06, 4, 8]} />
+                                    <meshStandardMaterial color="#212121" />
                                 </mesh>
-                                <mesh position={[0.15, -0.02, 0]}>
-                                    <circleGeometry args={[0.04, 8]} />
-                                    <meshStandardMaterial color="#FDA4AF" transparent opacity={0.6} />
+                                <mesh position={[0.12, 0, 0]}>
+                                    <capsuleGeometry args={[0.04, 0.06, 4, 8]} />
+                                    <meshStandardMaterial color="#212121" />
                                 </mesh>
-                            </>
-                        )}
+                                {/* Shine */}
+                                <mesh position={[-0.1, 0.04, 0.035]}>
+                                    <sphereGeometry args={[0.015, 8, 8]} />
+                                    <meshBasicMaterial color="#FFFFFF" />
+                                </mesh>
+                                <mesh position={[0.14, 0.04, 0.035]}>
+                                    <sphereGeometry args={[0.015, 8, 8]} />
+                                    <meshBasicMaterial color="#FFFFFF" />
+                                </mesh>
+                            </group>
 
-                        {/* Sweat drop when threatened */}
-                        {isThreatened && (
-                            <mesh position={[0.2, 0.1, 0]}>
-                                <sphereGeometry args={[0.025, 6, 6]} />
-                                <meshStandardMaterial color="#60A5FA" />
-                            </mesh>
-                        )}
-                    </group>
-                )}
+                            {/* Mouth */}
+                            <group position={[0, -0.1, 0]}>
+                                {isHealthy && (
+                                    <mesh rotation={[0, 0, 0]}>
+                                        <torusGeometry args={[0.06, 0.015, 8, 16, Math.PI]} />
+                                        <meshStandardMaterial color="#212121" />
+                                    </mesh>
+                                )}
+                                {isThreatened && (
+                                    <mesh>
+                                        <ringGeometry args={[0.03, 0.05, 16]} />
+                                        <meshStandardMaterial color="#212121" />
+                                    </mesh>
+                                )}
+                                {inBattle && (
+                                    <mesh position={[0, 0.02, 0]} rotation={[0, 0, 0]}>
+                                        <boxGeometry args={[0.12, 0.02, 0.01]} />
+                                        <meshStandardMaterial color="#212121" />
+                                    </mesh>
+                                )}
+                            </group>
 
-                {/* Dead face */}
-                {isDead && (
-                    <group position={[0, 0.02, 0.35]}>
-                        {/* X eyes */}
-                        <mesh position={[-0.1, 0.05, 0]} rotation={[0, 0, 0.785]}>
-                            <boxGeometry args={[0.08, 0.02, 0.02]} />
-                            <meshStandardMaterial color="#1F2937" />
-                        </mesh>
-                        <mesh position={[-0.1, 0.05, 0]} rotation={[0, 0, -0.785]}>
-                            <boxGeometry args={[0.08, 0.02, 0.02]} />
-                            <meshStandardMaterial color="#1F2937" />
-                        </mesh>
-                        <mesh position={[0.1, 0.05, 0]} rotation={[0, 0, 0.785]}>
-                            <boxGeometry args={[0.08, 0.02, 0.02]} />
-                            <meshStandardMaterial color="#1F2937" />
-                        </mesh>
-                        <mesh position={[0.1, 0.05, 0]} rotation={[0, 0, -0.785]}>
-                            <boxGeometry args={[0.08, 0.02, 0.02]} />
-                            <meshStandardMaterial color="#1F2937" />
-                        </mesh>
-                    </group>
-                )}
-            </group>
+                            {/* Blush */}
+                            {isHealthy && plant.happiness > 50 && (
+                                <>
+                                    <mesh position={[-0.18, -0.05, -0.02]}>
+                                        <circleGeometry args={[0.05, 16]} />
+                                        <meshBasicMaterial color="#FF8A80" transparent opacity={0.5} />
+                                    </mesh>
+                                    <mesh position={[0.18, -0.05, -0.02]}>
+                                        <circleGeometry args={[0.05, 16]} />
+                                        <meshBasicMaterial color="#FF8A80" transparent opacity={0.5} />
+                                    </mesh>
+                                </>
+                            )}
+                        </group>
+                    )}
 
-            {/* Leaves - more dynamic */}
-            <group ref={leafRef} position={[0, 0.72, 0]}>
-                {[0, 1.2, 2.4, 3.6, 5].map((angle, i) => (
-                    <group key={i}>
-                        <mesh
-                            position={[
-                                Math.cos(angle) * 0.32,
-                                0.15 + i * 0.05,
-                                Math.sin(angle) * 0.32
-                            ]}
-                            rotation={[0.4, angle, 0.3]}
-                        >
-                            <coneGeometry args={[0.1, 0.3, 4]} />
+                    {/* Dead Face (X eyes) */}
+                    {isDead && (
+                        <group position={[0, 0, 0.28]} scale={0.8}>
+                            <group position={[-0.12, 0.05, 0]} rotation={[0, 0, Math.PI / 4]}>
+                                <mesh>
+                                    <boxGeometry args={[0.1, 0.02, 0.01]} />
+                                    <meshStandardMaterial color="#4E342E" />
+                                </mesh>
+                                <mesh rotation={[0, 0, Math.PI / 2]}>
+                                    <boxGeometry args={[0.1, 0.02, 0.01]} />
+                                    <meshStandardMaterial color="#4E342E" />
+                                </mesh>
+                            </group>
+                            <group position={[0.12, 0.05, 0]} rotation={[0, 0, Math.PI / 4]}>
+                                <mesh>
+                                    <boxGeometry args={[0.1, 0.02, 0.01]} />
+                                    <meshStandardMaterial color="#4E342E" />
+                                </mesh>
+                                <mesh rotation={[0, 0, Math.PI / 2]}>
+                                    <boxGeometry args={[0.1, 0.02, 0.01]} />
+                                    <meshStandardMaterial color="#4E342E" />
+                                </mesh>
+                            </group>
+                        </group>
+                    )}
+
+                    {/* Shield Effect */}
+                    {plant.shieldStrength > 30 && !isDead && (
+                        <mesh scale={1.2}>
+                            <sphereGeometry args={[0.35, 32, 32]} />
                             <meshStandardMaterial
-                                color={isDead ? '#9CA3AF' : '#32CD32'}
+                                color="#29B6F6"
+                                transparent
+                                opacity={0.3}
+                                depthWrite={false}
                                 side={THREE.DoubleSide}
                             />
                         </mesh>
-                        {/* Leaf vein */}
-                        <mesh
-                            position={[
-                                Math.cos(angle) * 0.35,
-                                0.18 + i * 0.05,
-                                Math.sin(angle) * 0.35
-                            ]}
-                            rotation={[0.4, angle, 0.3]}
-                        >
-                            <cylinderGeometry args={[0.01, 0.01, 0.2, 4]} />
-                            <meshStandardMaterial color={isDead ? '#6B7280' : '#228B22'} />
-                        </mesh>
-                    </group>
-                ))}
+                    )}
+                </group>
             </group>
 
-            {/* Crown/top leaf */}
-            <mesh position={[0, 1.15, 0]} rotation={[0.2, 0, 0]}>
-                <coneGeometry args={[0.08, 0.2, 4]} />
-                <meshStandardMaterial color={isDead ? '#9CA3AF' : '#22C55E'} />
-            </mesh>
-
-            {/* Shield effect - more magical */}
-            {plant.shieldStrength > 30 && !isDead && (
-                <group position={[0, 0.7, 0]}>
-                    <mesh>
-                        <sphereGeometry args={[0.6, 20, 20]} />
-                        <meshStandardMaterial
-                            color="#38BDF8"
-                            transparent
-                            opacity={plant.shieldStrength / 300}
-                            side={THREE.DoubleSide}
-                        />
-                    </mesh>
-                    {/* Shield sparkles */}
-                    {[0, 1, 2, 3].map((i) => (
-                        <mesh key={i} position={[
-                            Math.cos(i * 1.57) * 0.55,
-                            Math.sin(performance.now() * 0.002 + i) * 0.1,
-                            Math.sin(i * 1.57) * 0.55
-                        ]}>
-                            <sphereGeometry args={[0.03, 6, 6]} />
-                            <meshStandardMaterial color="#7DD3FC" emissive="#38BDF8" emissiveIntensity={0.5} />
-                        </mesh>
-                    ))}
-                </group>
-            )}
-
-            {/* Happy particles when healthy or reacting with heart */}
-            {(isHealthy && plant.happiness > 70) || activeReaction === 'heart' ? (
-                <HappyParticles position={[0, 0, 0]} />
+            {/* Emotions / Particles */}
+            {(isHealthy && plant.happiness > 80) || plant.activeReaction === 'heart' ? (
+                <HappyParticles position={[0, 1.2, 0]} />
             ) : null}
 
-            {/* Dead halo - angel wings */}
-            {isDead && (
-                <group position={[0, 1.3, 0]}>
-                    <mesh rotation={[Math.PI / 2, 0, 0]}>
-                        <torusGeometry args={[0.2, 0.03, 8, 16]} />
-                        <meshStandardMaterial color="#FBBF24" emissive="#FBBF24" emissiveIntensity={0.8} />
-                    </mesh>
-                    {/* Mini wings */}
-                    <mesh position={[-0.25, -0.1, 0]} rotation={[0, 0, 0.3]}>
-                        <coneGeometry args={[0.1, 0.2, 4]} />
-                        <meshStandardMaterial color="#FFFFFF" transparent opacity={0.7} />
-                    </mesh>
-                    <mesh position={[0.25, -0.1, 0]} rotation={[0, 0, -0.3]}>
-                        <coneGeometry args={[0.1, 0.2, 4]} />
-                        <meshStandardMaterial color="#FFFFFF" transparent opacity={0.7} />
-                    </mesh>
-                </group>
-            )}
-
-            {/* Name tag sprite */}
-            <sprite position={[0, 1.55, 0]} scale={[1.6, 0.36, 1]}>
-                <spriteMaterial map={nameTexture} transparent depthTest={false} />
+            {/* Name Tag */}
+            <sprite position={[0, 1.8, 0]} scale={[2.5, 0.6, 1]}>
+                <spriteMaterial map={nameTexture} transparent sizeAttenuation={true} depthTest={false} />
             </sprite>
         </group>
     );
